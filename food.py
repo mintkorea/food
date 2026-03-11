@@ -1,54 +1,52 @@
 import streamlit as st
-from google import genai
+import google.generativeai as genai
 from PIL import Image
 import json
 from datetime import datetime
 import io
 import time
 
-# --- 1. 설정 ---
+# --- 1. API 및 모델 설정 (가장 안정적인 방식) ---
 api_key = st.secrets.get("GEMINI_API_KEY")
 if not api_key:
-    st.error("API 키를 Secrets에 등록해주세요.")
+    st.warning("⚠️ API 키가 설정되지 않았습니다. Secrets를 확인해주세요.")
     st.stop()
 
-client = genai.Client(api_key=api_key)
-MODEL_ID = "gemini-3-flash-preview"
+genai.configure(api_key=api_key)
+# 프리뷰 대신 안정화된 1.5-flash 모델을 메인으로 사용합니다.
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-# --- 2. 분석 함수 (상태 메시지 추가) ---
-def analyze_menu(image):
+def analyze_menu_with_retry(image, max_retries=3):
+    """서버 과부하 시 최대 3번까지 재시도하는 함수"""
     prompt = """
-    이미지에서 이번 주 식단 데이터를 추출해서 JSON으로만 응답해줘.
+    이미지에서 요일별 식단 데이터를 추출해서 JSON으로 응답해줘.
     형식: {"월": {"조식": "..", "중식": "..", "석식": "..", "인사": ".."}, ...}
+    반드시 마크다운 없이 순수 JSON만 응답해.
     """
     
-    # 상태 알림창 생성
-    status = st.empty()
-    
-    try:
-        status.info("🔍 Gemini AI가 이미지를 읽고 있습니다...")
-        response = client.models.generate_content(
-            model=MODEL_ID,
-            contents=[prompt, image]
-        )
-        
-        status.info("📝 데이터를 정리하는 중입니다...")
-        res_text = response.text.strip()
-        
-        # JSON 문자열 추출 로직
-        if "```json" in res_text:
-            res_text = res_text.split("```json")[1].split("```")[0]
-        elif "```" in res_text:
-            res_text = res_text.split("```")[1].split("```")[0]
-            
-        status.empty() # 상태 메시지 삭제
-        return res_text.strip()
-        
-    except Exception as e:
-        status.empty()
-        raise e
+    for i in range(max_retries):
+        try:
+            # 매 시도마다 상태 표시 업데이트
+            with st.spinner(f'AI 분석 중... (시도 {i+1}/{max_retries})'):
+                response = model.generate_content([prompt, image])
+                res_text = response.text.strip()
+                
+                # JSON 클렌징
+                if "```json" in res_text:
+                    res_text = res_text.split("```json")[1].split("```")[0]
+                elif "```" in res_text:
+                    res_text = res_text.split("```")[1].split("```")[0]
+                
+                return json.loads(res_text.strip())
+        except Exception as e:
+            if i < max_retries - 1:
+                st.write(f"⏳ 서버가 바쁩니다. 3초 후 다시 시도합니다... ({e})")
+                time.sleep(3)
+                continue
+            else:
+                raise e
 
-# --- 3. UI 구성 ---
+# --- 2. UI 구성 ---
 st.set_page_config(page_title="스마트 식단 매니저", layout="centered")
 st.title("🍱 스마트 식단 관리 매니저")
 
@@ -56,25 +54,25 @@ uploaded_file = st.file_uploader("식단표 이미지를 업로드하세요", ty
 
 if uploaded_file:
     img = Image.open(uploaded_file)
+    st.image(img, caption="업로드된 식단표", use_container_width=True)
     
-    # 버튼 클릭 시 세션 초기화 및 분석 시작
     if st.button("🚀 식단 분석 시작"):
         try:
-            # 분석 시작 전 기존 데이터 삭제
-            if 'menu_data' in st.session_state:
-                del st.session_state['menu_data']
-                
-            result = analyze_menu(img)
-            st.session_state['menu_data'] = json.loads(result)
+            # 분석 시작
+            menu_data = analyze_menu_with_retry(img)
+            st.session_state['menu_data'] = menu_data
             st.success("✅ 분석 완료!")
-            st.rerun() # 화면 새로고침하여 결과 표시
+            st.rerun() # 결과 즉시 표시를 위해 새로고침
         except Exception as e:
-            st.error(f"❌ 오류 발생: {e}")
+            st.error(f"❌ 여러 번 시도했으나 실패했습니다: {e}")
+            st.info("Tip: 잠시 후 다시 시도하거나, 더 선명한 이미지를 사용해 보세요.")
 
-# --- 4. 결과 표시 로직 ---
+# --- 3. 결과 표시 로직 ---
 if 'menu_data' in st.session_state:
     days = ["월", "화", "수", "목", "금", "토", "일"]
-    today_str = days[datetime.now().weekday()]
+    # 현재 시간 기준 요일 (서버 시간차 고려)
+    today_idx = datetime.now().weekday()
+    today_str = days[today_idx]
     
     st.divider()
     st.header(f"📅 오늘의 식단 ({today_str}요일)")
@@ -84,10 +82,16 @@ if 'menu_data' in st.session_state:
     if menu:
         col1, col2 = st.columns(2)
         with col1:
-            st.info(f"**중식**\n\n{menu.get('중식', '정보 없음')}")
+            st.info(f"**🍴 중식**\n\n{menu.get('중식', '정보 없음')}")
         with col2:
-            st.error(f"**석식**\n\n{menu.get('석식', '정보 없음')}")
+            st.error(f"**🌙 석식**\n\n{menu.get('석식', '정보 없음')}")
         
-        st.chat_message("assistant").write(menu.get("인사", "맛있게 드세요!"))
-    else:
-        st.warning("오늘의 식단 데이터를 찾을 수 없습니다. 분석 결과를 확인해주세요.")
+        st.chat_message("assistant").write(menu.get("인사", "오늘 하루도 고생 많으셨습니다! 맛있게 드세요."))
+    
+    # 다른 요일 식단 확인용 익스팬더
+    with st.expander("📝 전체 주간 식단 보기"):
+        st.json(st.session_state['menu_data'])
+
+    if st.button("🗑️ 초기화"):
+        del st.session_state['menu_data']
+        st.rerun()
