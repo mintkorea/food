@@ -4,7 +4,7 @@ from PIL import Image
 import json
 from datetime import datetime
 
-# 1. API 설정 (보안 강화)
+# 1. API 설정 (보안 준수)
 api_key = st.secrets.get("GEMINI_API_KEY")
 if not api_key:
     st.error("⚠️ Secrets에 GEMINI_API_KEY가 없습니다. 설정을 확인해 주세요.")
@@ -12,22 +12,22 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# 2. 식단 분석 함수 (404 에러 완벽 방어)
+# 2. 식단 분석 함수 (404 에러 원천 차단)
 def analyze_menu(image):
-    # 경로를 'models/' 포함하여 명시 (가장 안정적인 호출 방식)
+    # 가장 안정적인 표준 모델 경로 지정
     model = genai.GenerativeModel('models/gemini-1.5-flash')
     
     prompt = """
-    이미지 속 식단표에서 요일별 [중식, 석식] 메뉴를 추출해 JSON으로 응답해.
+    이미지 속 식단표에서 요일별 [중식, 석식] 메뉴를 추출해 JSON으로 응답해줘.
     형식: {"월": {"중식": "..", "석식": "..", "인사": ".."}, ...}
-    마크다운 없이 순수 JSON만 출력해.
+    마크다운 없이 순수 JSON 데이터만 출력해.
     """
     
     try:
         response = model.generate_content([prompt, image])
         res_text = response.text.strip()
         
-        # JSON 정제 로직
+        # JSON 데이터 클렌징
         if "```json" in res_text:
             res_text = res_text.split("```json")[1].split("```")[0]
         elif "```" in res_text:
@@ -37,7 +37,7 @@ def analyze_menu(image):
     except Exception as e:
         raise e
 
-# 3. UI 구성
+# 3. 메인 UI
 st.set_page_config(page_title="스마트 식단 매니저", layout="centered")
 st.title("🍱 스마트 식단 관리 매니저")
 
@@ -50,17 +50,19 @@ if uploaded_file:
     if st.button("🚀 식단 분석 시작"):
         with st.spinner('AI가 식단을 정밀 분석 중입니다...'):
             try:
+                # 429 에러 방지를 위해 한 번만 신중하게 호출
                 result = analyze_menu(img)
                 st.session_state['menu_data'] = result
                 st.success("✅ 분석 완료!")
                 st.rerun()
             except Exception as e:
                 st.error(f"❌ 오류 발생: {e}")
-                st.info("Tip: 429 에러 발생 시 잠시 후 다시 시도해 주세요.")
+                st.info("Tip: 429 에러(Quota exceeded) 발생 시 약 5분 뒤에 다시 시도해 주세요.")
 
-# 4. 결과 출력
+# 4. 결과 표시 로직
 if 'menu_data' in st.session_state:
     days = ["월", "화", "수", "목", "금", "토", "일"]
+    # 2026년 기준 현재 요일 계산
     today_str = days[datetime.now().weekday()]
     
     st.divider()
