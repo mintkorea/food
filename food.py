@@ -7,20 +7,20 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 import io
 
-# --- 1. API 및 모델 설정 ---
-# 404 에러를 방지하기 위해 최신 라이브러리 방식과 모델 경로를 사용합니다.
+# --- 1. API 및 모델 설정 수정 ---
 api_key = st.secrets.get("GEMINI_API_KEY")
-if not api_key:
-    st.error("⚠️ Streamlit Cloud의 [Settings > Secrets]에 GEMINI_API_KEY를 등록해주세요.")
-    st.stop()
-
 genai.configure(api_key=api_key)
 
-# 모델 선언 (가장 안정적인 호출 방식)
+# 404 에러 방지를 위한 이중 체크 로직
 try:
+    # 시도 1: 가장 최신 명칭 (사용자님 화면에 보이는 명칭)
     model = genai.GenerativeModel('gemini-1.5-flash')
-except Exception:
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+except:
+    try:
+        # 시도 2: 라이브러리 버전에 따른 대체 명칭
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
+    except Exception as e:
+        st.error(f"모델 로드 실패: {e}")
 
 # --- 2. 주요 기능 함수 ---
 
