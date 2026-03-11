@@ -14,7 +14,7 @@ genai.configure(api_key=api_key)
 # 404 에러 방지를 위한 이중 체크 로직
 try:
     # 시도 1: 가장 최신 명칭 (사용자님 화면에 보이는 명칭)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
 except:
     try:
         # 시도 2: 라이브러리 버전에 따른 대체 명칭
