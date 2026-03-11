@@ -1,34 +1,48 @@
 import streamlit as st
 import google.generativeai as genai
-from PIL import Image  # <-- 이 부분이 빠지면 NameError가 납니다!
+from PIL import Image
 import json
 from datetime import datetime
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import io
 
-# 1. API 설정
+# 1. API 설정 (404 에러 방지용 모델 경로 설정)
 api_key = st.secrets.get("GEMINI_API_KEY")
 if not api_key:
     st.error("Secrets에 GEMINI_API_KEY를 설정해주세요.")
     st.stop()
 
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 모델명을 'models/gemini-1.5-flash'로 명시적으로 적어 에러를 방지합니다.
+model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-# 2. 식단 분석 함수
 def analyze_menu(image):
     prompt = """
-    이미지에서 이번 주 요일별 식단 데이터를 추출해줘.
-    결과는 반드시 아래 구조의 순수한 JSON 데이터로만 응답해:
-    {
-      "월": {"조식": "..", "간편식": "..", "중식": "..", "석식": "..", "야식": "..", "인사": ".."},
-      ...
-      "일": {"조식": "..", ...}
-    }
+    이미지에서 이번 주 요일별 식단 데이터를 추출해서 JSON으로 응답해줘.
+    형식: {"월": {"조식": "..", "간편식": "..", "중식": "..", "석식": "..", "야식": "..", "인사": "..", "효능": ".."}, ...}
+    마크다운 없이 순수 JSON만 출력해.
     """
     response = model.generate_content([prompt, image])
     res_text = response.text
     if "```json" in res_text:
         res_text = res_text.split("```json")[1].split("```")[0]
     return res_text.strip()
+
+# PDF 생성 함수 (간이 버전)
+def create_pdf(data, day_str):
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer)
+    p.setFont("Helvetica", 16) # 한글 폰트 설정이 복잡할 경우를 대비해 우선 영문 기반 구조
+    p.drawString(100, 800, f"Weekly Menu Report ({day_str})")
+    y = 750
+    for meal, menu in data.items():
+        p.drawString(100, y, f"[{meal}]: {menu[:50]}...")
+        y -= 30
+    p.showPage()
+    p.save()
+    return buffer.getvalue()
 
 # 3. UI 구성
 st.set_page_config(page_title="스마트 식단 매니저", layout="wide")
@@ -37,63 +51,47 @@ st.title("🍱 스마트 식단 관리 매니저")
 uploaded_file = st.file_uploader("주간 식단표 이미지를 업로드하세요", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file:
-    # 에러 수정 포인트: PIL의 Image.open 사용
     img = Image.open(uploaded_file)
-    
-    if st.button("식단 분석 및 앱 실행"):
-        with st.spinner('AI가 식단을 분석 중입니다...'):
+    if st.button("식단 분석 시작"):
+        with st.spinner('AI가 분석 중... (404 에러 해결 중)'):
             try:
                 result = analyze_menu(img)
                 st.session_state['menu_data'] = json.loads(result)
                 st.success("분석 완료!")
             except Exception as e:
-                st.error(f"분석 실패: {e}")
+                st.error(f"분석 실패: {e} \n(모델명을 다시 확인하거나 라이브러리를 업데이트 하세요)")
 
 # 4. 시간대별 자동 표출 로직
 if 'menu_data' in st.session_state:
-    # 현재 요일 (월~일)
     days = ["월", "화", "수", "목", "금", "토", "일"]
-    today_idx = datetime.now().weekday()
-    today_str = days[today_idx]
+    # 현재 서버 시간 기준 (한국 시간 조정 필요 시 timedelta 사용)
+    now = datetime.now()
+    today_str = days[now.weekday()]
     
-    # 네비게이션바 (이전/다음날)
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.header(f"📅 오늘의 식단 ({today_str}요일)")
-    
+    st.header(f"📅 오늘의 식단 ({today_str}요일)")
     day_menu = st.session_state['menu_data'].get(today_str, {})
-    now_hour = datetime.now().hour
-    
-    # 시간대별 우선순위 노출
-    st.divider()
-    
-    # 아침 (오전 10시 전)
-    if now_hour < 10:
-        st.subheader("☀️ 지금은 [조식/간편식] 시간!")
+    hour = now.hour
+
+    # 목요일 아침 예시: 조식+간편식 우선
+    if hour < 10:
+        st.subheader("☀️ 지금 가장 필요한 정보: 조식 & 간편식")
         c1, c2 = st.columns(2)
         c1.info(f"**조식**\n\n{day_menu.get('조식')}")
         c2.success(f"**간편식**\n\n{day_menu.get('간편식')}")
-        with st.expander("이후 식단(중식/석식) 보기"):
-            st.write(f"중식: {day_menu.get('중식')}")
-            st.write(f"석식: {day_menu.get('석식')}")
-            
-    # 점심 (10시~15시)
-    elif 10 <= now_hour < 15:
-        st.subheader("🍴 지금은 [중식] 시간!")
+    elif 10 <= hour < 15:
+        st.subheader("🍴 지금 가장 필요한 정보: 중식")
         st.warning(day_menu.get('중식'))
-        with st.expander("이후 식단(석식/야식) 보기"):
-            st.write(f"석식: {day_menu.get('석식')}")
-            st.write(f"야식: {day_menu.get('야식')}")
-            
-    # 저녁 이후
     else:
-        st.subheader("🌙 지금은 [석식/야식] 시간!")
+        st.subheader("🌙 지금 가장 필요한 정보: 석식 & 야식")
         c1, c2 = st.columns(2)
         c1.error(f"**석식**\n\n{day_menu.get('석식')}")
         c2.dark(f"**야식**\n\n{day_menu.get('야식')}")
-        with st.expander("내일 조식 미리보기"):
-            next_day = days[(today_idx + 1) % 7]
-            st.write(st.session_state['menu_data'].get(next_day, {}).get('조식'))
 
-    # 격려말
-    st.chat_message("assistant").write(day_menu.get("인사", "맛있게 드시고 힘내세요!"))
+    # 건강 정보 및 인사
+    st.write("---")
+    st.write(f"💡 **메뉴 효능:** {day_menu.get('효능', '건강한 한 끼로 에너지를 채우세요!')}")
+    st.chat_message("assistant").write(day_menu.get("인사", "맛있게 드세요!"))
+
+    # PDF 다운로드 버튼
+    pdf_data = create_pdf(day_menu, today_str)
+    st.download_button(label="📄 오늘 식단 PDF 다운로드", data=pdf_data, file_name=f"menu_{today_str}.pdf", mime="application/pdf")
