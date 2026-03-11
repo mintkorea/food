@@ -1,17 +1,18 @@
 import streamlit as st
 import google.generativeai as genai
-from PIL import Image
-import json
-from datetime import datetime
 import os
 
-# 코드에 직접 키를 쓰지 않고, 시스템이나 Streamlit 설정에서 불러옵니다.
-api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
+# Streamlit Secrets 또는 환경 변수에서 키를 가져옵니다.
+api_key = st.secrets.get("GEMINI_API_KEY")
 
 if not api_key:
-    st.error("API 키가 설정되지 않았습니다. 환경 변수를 확인해주세요.")
+    st.error("⚠️ API 키가 설정되지 않았습니다. Streamlit Cloud의 [Settings > Secrets]에 GEMINI_API_KEY를 등록해 주세요.")
+    st.stop()  # 키가 없으면 이후 코드를 실행하지 않음
 else:
+    # API 설정 적용
     genai.configure(api_key=api_key)
+    # 모델 선언 (최신 버전 명칭 사용)
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
 # 1. Gemini API 설정
 genai.configure(api_key="AIzaSyAbCNCDKPHqFdvlM60I79nO9Z4RMye0IbQ") # 발급받은 키 입력
