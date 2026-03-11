@@ -15,7 +15,7 @@ genai.configure(api_key=api_key)
 # 2. 식단 분석 함수 (핵심 에러 방어)
 def analyze_menu(image):
     # 'models/'를 명확히 붙여야 404 에러가 나지 않습니다.
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+   model = genai.GenerativeModel('gemini-1.5-flash-latest')
     
     prompt = """
     이미지에서 요일별 식단(중식, 석식)을 추출해서 JSON으로 출력해줘.
