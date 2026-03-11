@@ -14,21 +14,23 @@ if not api_key:
     st.error("Secrets에 GEMINI_API_KEY를 설정해주세요.")
     st.stop()
 
-genai.configure(api_key=api_key)
-# 모델명을 'models/gemini-1.5-flash'로 명시적으로 적어 에러를 방지합니다.
-model = genai.GenerativeModel('models/gemini-1.5-flash')
+# 기존의 모델 선언 부분을 아래와 같이 수정
+try:
+    # 1. 가장 표준적인 호출 방식
+    model = genai.GenerativeModel('gemini-1.5-flash')
+except Exception:
+    # 2. 위 방식이 실패할 경우 대체 호출 방식
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
 
 def analyze_menu(image):
     prompt = """
     이미지에서 이번 주 요일별 식단 데이터를 추출해서 JSON으로 응답해줘.
     형식: {"월": {"조식": "..", "간편식": "..", "중식": "..", "석식": "..", "야식": "..", "인사": "..", "효능": ".."}, ...}
-    마크다운 없이 순수 JSON만 출력해.
+    반드시 마크다운 기호 없이 순수한 JSON 텍스트만 출력해.
     """
+    # 에러 발생 시 로그를 보기 위해 시도
     response = model.generate_content([prompt, image])
-    res_text = response.text
-    if "```json" in res_text:
-        res_text = res_text.split("```json")[1].split("```")[0]
-    return res_text.strip()
+    return response.text.strip()
 
 # PDF 생성 함수 (간이 버전)
 def create_pdf(data, day_str):
