@@ -1,25 +1,50 @@
-# --- 모델 설정 부분 수정 ---
-# AI Studio 화면에 나온 최신 모델명을 포함하여 시도합니다.
-model_names = ['gemini-3-flash-preview', 'gemini-1.5-flash', 'gemini-1.5-flash-latest']
+import streamlit as st
+from google import genai  # 라이브러리 호출 방식 변경
+from PIL import Image
+import json
+from datetime import datetime
+import io
 
-model = None
-for name in model_names:
-    try:
-        model = genai.GenerativeModel(name)
-        # 테스트 호출로 모델 유효성 확인
-        break 
-    except:
-        continue
-
-if not model:
-    st.error("사용 가능한 Gemini 모델을 찾을 수 없습니다. API 키 권한을 확인해주세요.")
+# 1. API 및 클라이언트 설정
+api_key = st.secrets.get("GEMINI_API_KEY")
+if not api_key:
+    st.error("Secrets에 GEMINI_API_KEY를 등록해주세요.")
     st.stop()
+
+# 최신 SDK 방식 적용
+client = genai.Client(api_key=api_key)
+# 사용자님 화면에 표시된 최신 모델명 사용
+MODEL_ID = "gemini-3-flash-preview"
 
 def analyze_menu(image):
     prompt = """
-    식단표 이미지에서 요일별(월~일) [조식, 간편식, 중식, 석식, 야식]을 추출해 JSON으로 줘.
-    메뉴별 효능과 따뜻한 인사말도 포함해줘. 마크다운 없이 JSON만 응답해.
+    이미지에서 이번 주 요일별 식단 데이터를 추출해서 JSON으로 응답해줘.
+    형식: {"월": {"조식": "..", "중식": "..", "석식": "..", "인사": ".."}, ...}
+    반드시 마크다운 없이 순수 JSON만 응답해.
     """
-    # 모델 호출 방식 업데이트
-    response = model.generate_content([prompt, image])
-    return response.text.strip()
+    # 최신 SDK 호출 규격 (화면 예제 반영)
+    response = client.models.generate_content(
+        model=MODEL_ID,
+        contents=[prompt, image]
+    )
+    res_text = response.text.strip()
+    if "```json" in res_text:
+        res_text = res_text.split("```json")[1].split("```")[0]
+    return res_text.strip()
+
+# --- 이하 UI 및 로직 동일 ---
+st.title("🍱 스마트 식단 관리 매니저")
+uploaded_file = st.file_uploader("식단표 이미지를 업로드하세요", type=['png', 'jpg', 'jpeg'])
+
+if uploaded_file:
+    img = Image.open(uploaded_file)
+    if st.button("🚀 식단 분석 시작"):
+        try:
+            result = analyze_menu(img)
+            st.session_state['menu_data'] = json.loads(result)
+            st.success("분석 완료!")
+        except Exception as e:
+            st.error(f"분석 실패: {e}")
+
+if 'menu_data' in st.session_state:
+    st.write("오늘의 메뉴:", st.session_state['menu_data'])
