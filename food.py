@@ -12,11 +12,12 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# 2. 식단 분석 함수 (핵심 에러 방어)
+# 2. 식단 분석 함수 (들여쓰기 교정 완료)
 def analyze_menu(image):
-    # 'models/'를 명확히 붙여야 404 에러가 나지 않습니다.
-   model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    # 404 방지를 위해 '-latest' 모델명을 사용합니다.
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
     
+    # 이 아래 줄들의 시작 공백이 반드시 함수(def)보다 4칸 더 들어가야 합니다.
     prompt = """
     이미지에서 요일별 식단(중식, 석식)을 추출해서 JSON으로 출력해줘.
     형식: {"월": {"중식": "..", "석식": "..", "인사": ".."}, "화": {...}}
@@ -27,7 +28,6 @@ def analyze_menu(image):
         response = model.generate_content([prompt, image])
         res_text = response.text.strip()
         
-        # 불필요한 마크다운 기호 제거
         if "```" in res_text:
             res_text = res_text.split("```")[1].replace("json", "").strip()
             
@@ -47,7 +47,6 @@ if uploaded_file:
     if st.button("🚀 식단 분석 시작"):
         with st.spinner('AI가 분석 중입니다...'):
             try:
-                # 분석 실행
                 result = analyze_menu(img)
                 st.session_state['menu_data'] = result
                 st.success("분석 완료!")
@@ -55,9 +54,9 @@ if uploaded_file:
             except Exception as e:
                 st.error(f"오류가 발생했습니다: {str(e)}")
                 if "404" in str(e):
-                    st.info("모델을 찾을 수 없습니다. 사용 가능한 모델을 확인하세요.")
+                    st.info("모델 인식 문제 혹은 API 권한 이슈입니다.")
                 elif "429" in str(e):
-                    st.info("서버 할당량 초과입니다. 5분 후에 다시 시도해 주세요.")
+                    st.info("서버 할당량 초과입니다. 잠시 후 다시 시도해 주세요.")
 
 # 4. 결과 출력
 if 'menu_data' in st.session_state:
