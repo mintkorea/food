@@ -15,7 +15,7 @@ genai.configure(api_key=api_key)
 # 2. 식단 분석 함수 (핵심 에러 방어)
 def analyze_menu(image):
     # 'models/'를 명확히 붙여야 404 에러가 나지 않습니다.
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
     
     prompt = """
     이미지에서 요일별 식단(중식, 석식)을 추출해서 JSON으로 출력해줘.
@@ -53,8 +53,11 @@ if uploaded_file:
                 st.success("분석 완료!")
                 st.rerun()
             except Exception as e:
-                st.error(f"오류가 발생했습니다: {e}")
-                st.info("Tip: 429 에러는 구글 서버 할당량 초과입니다. 5분 뒤에 시도해 주세요.")
+                st.error(f"오류가 발생했습니다: {str(e)}")
+                if "404" in str(e):
+                    st.info("모델을 찾을 수 없습니다. 사용 가능한 모델을 확인하세요.")
+                elif "429" in str(e):
+                    st.info("서버 할당량 초과입니다. 5분 후에 다시 시도해 주세요.")
 
 # 4. 결과 출력
 if 'menu_data' in st.session_state:
