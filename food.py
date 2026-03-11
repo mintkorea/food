@@ -21,7 +21,7 @@ genai.configure(api_key=api_key)
 def analyze_menu(image):
     # 'models/'를 명시하여 404 에러를 원천 차단합니다.
     model = genai.GenerativeModel('models/gemini-1.5-flash')
-    
+
     prompt = """
     이미지에서 요일별 [중식, 석식] 메뉴를 추출해 JSON으로 응답해줘.
     형식: {"월": {"중식": "..", "석식": "..", "인사": ".."}, "화": {...}}
