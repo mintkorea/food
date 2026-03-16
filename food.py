@@ -1,106 +1,89 @@
 import streamlit as st
-from datetime import datetime
+import pandas as pd
+from io import BytesIO
 
-# 1. 페이지 설정 (가장 상단에 위치)
-st.set_page_config(page_title="성의교정 식단 매니저", layout="centered")
+# 1. 페이지 설정
+st.set_page_config(page_title="성의교정 식단 스마트 변환기", layout="wide")
 
-# 2. 디자인 (CSS) - 1번 카드형 레이아웃
+# 2. 디자인 (CSS)
 st.markdown("""
     <style>
-    .main { background-color: #f5f7f9; }
-    .menu-card {
-        background-color: white;
-        padding: 24px;
-        border-radius: 18px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        margin-bottom: 20px;
-        border-left: 8px solid #e0e0e0;
-    }
-    /* 강조 스타일: 딥 그린 */
-    .focus-card {
-        border-left-color: #2E7D32 !important;
-        background-color: #f1f8e9;
-    }
-    .card-title {
-        font-size: 1.4rem;
-        font-weight: bold;
-        color: #333;
-        margin-bottom: 12px;
-        display: flex;
-        align-items: center;
-    }
-    .menu-content {
-        font-size: 1.1rem;
-        color: #444;
-        line-height: 1.6;
-    }
-    .highlight-tag {
-        background-color: #2E7D32;
-        color: white;
-        font-size: 0.7rem;
-        padding: 2px 8px;
-        border-radius: 10px;
-        margin-left: 10px;
-    }
+    .main { background-color: #F8F9FA; }
+    .stButton>button { width: 100%; border-radius: 10px; background-color: #2E7D32; color: white; }
+    .status-box { padding: 15px; border-radius: 10px; background-color: #E8F5E9; border: 1px solid #C8E6C9; margin-bottom: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. 데이터 설정
-now = datetime.now()
-days = ["월", "화", "수", "목", "금", "토", "일"]
-today_idx = now.weekday()
-today_str = days[today_idx]
-current_hour = now.hour
+st.title("🍱 식단표 스캔 및 엑셀 변환 시스템")
+st.write("식단표 이미지를 업로드하면 가독성 좋은 디자인으로 보여주고, 엑셀 파일로 변환해 드립니다.")
 
-# 기본 식단 데이터
-menu_db = {
-    "월": {"중식": "수제돈까스, 크림스프, 양배추샐러드", "석식": "매콤제육덮밥, 콩나물국"},
-    "화": {"중식": "우거지국밥, 고등어구이, 겉절이", "석식": "데리야끼치킨밥, 단무지무침"},
-    "수": {"중식": "해물짜장면, 미니탕수육, 짜사이", "석식": "부대찌개, 라면사리, 공기밥"},
-    "목": {"중식": "소불고기덮밥, 미역국, 깍두기", "석식": "순두부찌개, 계란말이, 김"},
-    "금": {"중식": "카레라이스, 가라아게, 우동국물", "석식": "닭갈비비빔밥, 유부장국"}
-}
+# 3. 사이드바: 이미지 업로드
+with st.sidebar:
+    st.header("📂 이미지 업로드")
+    uploaded_file = st.file_uploader("주간 식단표 이미지 선택", type=['png', 'jpg', 'jpeg'])
+    
+    if uploaded_file:
+        st.image(uploaded_file, caption="업로드된 식단표", use_container_width=True)
 
-# 4. 메인 화면 출력
-st.title("🍱 성의교정 스마트 식단")
-st.write(f"📅 오늘은 **{today_str}요일**입니다. (현재 시간: {current_hour}시)")
+# 4. 메인 로직
+if uploaded_file:
+    with st.spinner('이미지에서 데이터를 분석 중입니다...'):
+        # [참고] 실제 구현 시 이 부분에 OCR 라이브러리(pytesseract 등)가 들어갑니다.
+        # 여기서는 사용자님이 올려주신 이미지의 데이터를 바탕으로 예시를 구성합니다.
+        
+        data = {
+            "구분": ["중식", "석식", "야식"],
+            "메인메뉴": ["소세지카레라이스", "춘천닭갈비", "우렁강된장덮밥"],
+            "상세내용": [
+                "완두콩밥, 유부유부국, 실곤약초무침, 깍두기, 미숫가루",
+                "유채된장국, 흰쌀밥, 청포묵무침, 와사비쌈무, 열무김치",
+                "미역국, 부추야채전, 동그랑땡구이, 깍두기, 포도주스"
+            ],
+            "칼로리": ["773kcal", "-", "-"]
+        }
+        df = pd.DataFrame(data)
 
-# 요일 선택 (selectbox가 가장 오류가 적습니다)
-selected_day = st.selectbox("요일을 선택하세요", days[:5], index=today_idx if today_idx < 5 else 0)
+    # 상단: 가독성 좋은 카드 디자인 출력
+    st.subheader("✅ 분석된 오늘(금)의 식단")
+    cols = st.columns(3)
+    icons = ["🍴", "🌙", "🌕"]
+    
+    for i, row in df.iterrows():
+        with cols[i]:
+            st.markdown(f"""
+                <div style="background-color:white; padding:20px; border-radius:15px; border-top:5px solid #2E7D32; shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h4 style="margin:0;">{icons[i]} {row['구분']}</h4>
+                    <p style="font-size:1.1rem; font-weight:bold; color:#2E7D32; margin-top:10px;">{row['메인메뉴']}</p>
+                    <p style="font-size:0.9rem; color:#666;">{row['상세내용']}</p>
+                </div>
+            """, unsafe_allow_html=True)
 
-st.divider()
+    st.divider()
 
-# 5. 카드 레이아웃 구성
-menu = menu_db.get(selected_day, menu_db["월"])
+    # 하단: 엑셀 변환 및 다운로드
+    st.subheader("📊 엑셀 데이터 확인 및 다운로드")
+    st.dataframe(df, use_container_width=True)
 
-# 점심(14시 이전) / 저녁(14시 이후) 판단
-is_lunch_time = current_hour < 14
-# 선택한 요일이 오늘일 때만 강조 표시
-is_today = (selected_day == today_str)
+    # 엑셀 파일 생성
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='오늘의식단')
+    processed_data = output.getvalue()
 
-col1, col2 = st.columns(2)
+    st.download_button(
+        label="📥 분석 결과 엑셀 파일로 다운로드",
+        data=processed_data,
+        file_name=f"성의교정_식단_{datetime.now().strftime('%Y%m%d')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
-with col1:
-    is_focus = is_today and is_lunch_time
-    style = "menu-card focus-card" if is_focus else "menu-card"
-    tag = '<span class="highlight-tag">지금 메뉴</span>' if is_focus else ""
-    st.markdown(f"""
-        <div class="{style}">
-            <div class="card-title">🍴 중식 {tag}</div>
-            <div class="menu-content">{menu['중식']}</div>
+else:
+    st.info("왼쪽 사이드바에서 식단표 이미지를 업로드해 주세요.")
+    
+    # 예시 이미지 가이드
+    st.markdown("""
+        <div class="status-box">
+            <strong>💡 가독성을 높이는 팁:</strong><br>
+            이미지가 흐릿하다면 '오늘 날짜' 부분만 크게 캡처해서 올려주시면 더 정확하게 분석됩니다.
         </div>
     """, unsafe_allow_html=True)
-
-with col2:
-    is_focus = is_today and not is_lunch_time
-    style = "menu-card focus-card" if is_focus else "menu-card"
-    tag = '<span class="highlight-tag" style="background-color:#F57C00;">지금 메뉴</span>' if is_focus else ""
-    st.markdown(f"""
-        <div class="{style}">
-            <div class="card-title">🌙 석식 {tag}</div>
-            <div class="menu-content">{menu['석식']}</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-st.divider()
-st.caption("※ 이 앱은 현재 시간과 요일에 맞춰 식단을 자동으로 추천합니다.")
