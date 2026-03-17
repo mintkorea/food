@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
 # 1. 데이터 설정
 color_theme = {
@@ -17,93 +18,82 @@ menu_data = {
     "야식": ["소고기미역죽", "돈육장조림", "깍두기", "블루베리요플레"]
 }
 
-# 2. 세션 관리
-if 'active_meal' not in st.session_state:
+# 2. 세션 관리 및 쿼리 파라미터를 이용한 상태 변경
+# 버튼 클릭 시 URL 파라미터를 변경하여 페이지를 갱신하는 트릭을 씁니다.
+query_params = st.query_params
+if "meal" in query_params:
+    st.session_state.active_meal = query_params["meal"]
+elif 'active_meal' not in st.session_state:
     st.session_state.active_meal = "중식"
-
-def update_meal(meal_name):
-    st.session_state.active_meal = meal_name
 
 current_sel = st.session_state.active_meal
 bold_c = color_theme[current_sel]["idx"]
 soft_bg = color_theme[current_sel]["bg"]
 
-# 3. CSS: 브라우저 뷰포트(Viewport) 기준 절대 고정
-# !important를 모든 속성에 부여하여 Streamlit의 간섭을 차단합니다.
+# 3. 메인 UI (카드 디자인)
 st.markdown(f"""
 <style>
-    /* 메인 앱의 너비 제한 및 오른쪽 여백 확보 */
     .main .block-container {{
-        max-width: 550px !important;
-        padding-right: 80px !important;
+        max-width: 500px !important;
+        padding-right: 70px !important;
         margin: 0 auto !important;
     }}
-
-    /* 플로팅 버튼들을 감싸는 컨테이너 - 화면에 고정 */
-    [data-testid="stVerticalBlock"] > div:has(button[key^="btn_"]) {{
-        position: fixed !important;
-        right: 0px !important;
-        top: 50% !important;
-        transform: translateY(-50%) !important;
-        width: 55px !important;
-        z-index: 999999 !important;
-        background-color: transparent !important;
-    }}
-
-    /* 버튼 스타일 강제 적용 */
-    button[key^="btn_"] {{
-        writing-mode: vertical-rl !important;
-        text-orientation: upright !important;
-        height: 85px !important;
-        width: 50px !important;
-        min-width: 50px !important;
-        border-radius: 12px 0 0 12px !important;
-        border: none !important;
-        color: white !important;
-        font-weight: bold !important;
-        margin-bottom: 3px !important;
-        box-shadow: -2px 2px 10px rgba(0,0,0,0.2) !important;
-        cursor: pointer !important;
+    .main-card {{
+        background-color: {soft_bg} !important;
+        border: 2.5px solid {bold_c} !important;
+        border-radius: 20px !important;
+        padding: 30px 15px !important;
+        text-align: center;
+        min-height: 380px;
     }}
 </style>
+<div class="main-card">
+    <h2 style="color: {bold_c};">{current_sel}</h2>
+    <hr style="border: 0.5px solid {bold_c}; opacity: 0.2;">
+    <p style="font-size: 24px; font-weight: bold; color: #333; margin-top: 20px;">🍲 {menu_data[current_sel][0]}</p>
+    <p style="font-size: 16px; color: #555; line-height: 1.8;">{' / '.join(menu_data[current_sel][1:])}</p>
+</div>
 """, unsafe_allow_html=True)
 
-# 4. 메인 식단 카드
-st.title("🍴 스마트 식단 가이드")
+# 4. HTML/JS 플로팅 바 (절대 밀리지 않는 레이어)
+# 이 부분은 Streamlit 레이아웃의 영향을 받지 않고 브라우저 우측에 고정됩니다.
+html_code = f"""
+<div id="floating-nav" style="
+    position: fixed;
+    right: 0px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    z-index: 99999;
+">
+"""
 
-st.markdown(f"""
-    <div style="
-        background-color: {soft_bg};
-        border: 2.5px solid {bold_c};
-        border-radius: 20px;
-        padding: 35px 20px;
-        text-align: center;
-        min-height: 400px;
-    ">
-        <h2 style="color: {bold_c};">{current_sel}</h2>
-        <div style="width: 40px; height: 3px; background-color: {bold_c}; margin: 15px auto;"></div>
-        <p style="font-size: 24px; font-weight: bold; color: #333; margin-top: 20px;">🍲 {menu_data[current_sel][0]}</p>
-        <p style="font-size: 16px; color: #555; margin-top: 15px; line-height: 1.8;">
-            {' / '.join(menu_data[current_sel][1:])}
-        </p>
-    </div>
-""", unsafe_allow_html=True)
-
-# 5. 플로팅 버튼 생성
-# 이 버튼들이 CSS 선택자에 의해 우측 중앙에 고정됩니다.
 for meal in ["조식", "간편식", "중식", "석식", "야식"]:
-    is_active = (meal == current_sel)
     m_color = color_theme[meal]["idx"]
+    is_active = (meal == current_sel)
+    opacity = 1.0 if is_active else 0.4
     
-    st.markdown(f"""
-        <style>
-        button[key="btn_{meal}"] {{
-            background-color: {m_color} !important;
-            opacity: {1.0 if is_active else 0.4} !important;
-            transform: {"scaleX(1.15) translateX(-5px)" if is_active else "none"} !important;
-            transition: all 0.2s ease !important;
-        }}
-        </style>
-    """, unsafe_allow_html=True)
-    
-    st.button(meal, key=f"btn_{meal}", on_click=update_meal, args=(meal,))
+    # 클릭 시 부모창(Streamlit)의 URL을 변경하여 리로드 시킴
+    html_code += f"""
+    <button onclick="parent.window.location.search = '?meal={meal}'" style="
+        writing-mode: vertical-rl;
+        text-orientation: upright;
+        height: 80px;
+        width: 48px;
+        background-color: {m_color};
+        color: white;
+        border: none;
+        border-radius: 12px 0 0 12px;
+        margin-bottom: 2px;
+        font-weight: bold;
+        opacity: {opacity};
+        cursor: pointer;
+        box-shadow: -2px 2px 5px rgba(0,0,0,0.2);
+    ">{meal}</button>
+    """
+
+html_code += "</div>"
+
+# 고정된 높이의 컴포넌트로 플로팅 바 삽입
+components.html(html_code, height=500)
