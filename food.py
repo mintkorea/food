@@ -1,19 +1,17 @@
 import streamlit as st
 from datetime import datetime, timedelta, time
 
-# 1. 한국 시간(KST) 및 기본 설정
+# 1. 시간 및 날짜 설정 (KST)
 now = datetime.utcnow() + timedelta(hours=9)
 curr_t = now.time()
 weekday = now.weekday()
 day_names = ["월", "화", "수", "목", "금", "토", "일"]
 
-# 2. 식단 데이터 (사용자 제공 정상 데이터 사용)
+# 2. 이번 주 식단 데이터 (사용자 제공 정상 데이터 기반)
 meal_data = {
-    "2026-03-16": {"조식": {"menu": "두우스프 / 단호박에그마요샌드", "side": "바게트, 잡곡식빵..."}, "중식": {"menu": "차돌해물짬뽕밥", "side": "..."}, "석식": {"menu": "어항가지돈육덮밥", "side": "..."}, "야식": {"menu": "날치알볶음밥", "side": "..."}},
-    "2026-03-17": {"조식": {"menu": "제철미나리쭈꾸미연포탕", "side": "매운두부찜..."}, "중식": {"menu": "버섯불고호", "side": "..."}, "석식": {"menu": "양배추멘치카츠", "side": "..."}, "야식": {"menu": "소고기미역죽", "side": "..."}},
     "2026-03-18": {
         "조식": {"menu": "감자수제비", "side": "흰쌀밥, 돈채가지볶음, 양념고추지, 깍두기, 누룽지/원두커피"},
-        "간편식": {"menu": "닭가슴살샐러드 & 바나나", "side": ""},
+        "간편식": {"menu": "닭가슴살샐러드 & 바나나", "side": "신선한 과일과 채소"},
         "중식": {"menu": "뼈없는닭볶음탕", "side": "혼합잡곡밥, 팽이장국, 유부겨자냉채, 흑깨드레싱샐러드, 열무김치, 복분자주스"},
         "석식": {"menu": "하이디라오마라탕", "side": "분모자+포두부+소세지 & 탕수육, 후르츠소스, 흰쌀밥, 짜사이무침, 열무김치"},
         "야식": {"menu": "돈사태떡찜", "side": "흰쌀밥, 유채된장국, 땅콩드레싱샐러드, 멸치볶음, 양파장아찌, 요구르트"}
@@ -32,7 +30,7 @@ if curr_t < meal_times["중식"][0]: auto_meal = "조식"
 elif curr_t < meal_times["석식"][0]: auto_meal = "중식"
 else: auto_meal = "석식"
 
-# 3. CSS (정상 작동하는 라디오 버튼 스타일 유지 + 상단 여백 보정)
+# 3. CSS: 라디오 버튼 한 줄 고정 및 여백 최적화
 day_color = "#E95444" if weekday == 6 else ("#4A90E2" if weekday == 5 else "#222")
 
 st.markdown(f"""
@@ -42,54 +40,83 @@ st.markdown(f"""
     
     .date-title {{ font-size: 20px !important; font-weight: 800; text-align: center; margin: 10px 0 !important; color: {day_color}; }}
 
+    /* 메뉴 카드 */
     .menu-card {{ border: 3px solid var(--card-color); border-radius: 20px 20px 0 0; padding: 30px 15px; text-align: center; background-color: white; min-height: 220px; }}
+    .side-menu {{ color: #444; font-size: 17px !important; line-height: 1.6; font-weight: 500; margin-top: 15px; word-break: keep-all; }}
 
-    .side-menu {{ color: #444; font-size: 17px !important; line-height: 1.6; font-weight: 500; margin-top: 15px; }}
-
-    .index-tabs-wrap {{ display: flex; width: 100%; overflow: hidden; margin-top: -3px; }}
+    /* 인덱스 탭 */
+    .index-tabs-wrap {{ display: flex; width: 100%; margin-top: -3px; }}
     .tab-unit {{ flex: 1; text-align: center; padding: 10px 0; font-size: 13px !important; font-weight: bold; color: white; }}
 
-    /* 라디오 버튼 (제공해주신 정상 소스 스타일) */
+    /* 라디오 버튼 한 줄 고정 핵심 CSS */
     div[data-testid="stRadio"] > div {{
-        display: flex !important; flex-wrap: nowrap !important;
+        display: flex !important; 
+        flex-wrap: nowrap !important; /* 줄바꿈 절대 방지 */
         background-color: #f1f3f5; padding: 10px 2px !important; border-radius: 0 0 20px 20px;
+        overflow-x: auto; /* 화면 작을 시 가로 스크롤 허용 */
     }}
-    div[data-testid="stRadio"] label {{ flex: 1 !important; justify-content: center !important; }}
-    div[data-testid="stRadio"] label p {{ font-size: 13px !important; font-weight: 800 !important; white-space: nowrap !important; }}
+    div[data-testid="stRadio"] label {{ flex: 1 !important; min-width: fit-content !important; justify-content: center !important; }}
+    div[data-testid="stRadio"] label p {{ 
+        font-size: 13px !important; font-weight: 800 !important; 
+        white-space: nowrap !important; /* 텍스트 줄바꿈 방지 */
+    }}
     
-    .timer-box {{ text-align: center; background-color: #f8f9fa; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: bold; color: #555; margin: 15px 0 30px 0; }}
+    .timer-box {{ text-align: center; background-color: #f8f9fa; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: bold; color: #555; margin-top: 20px; }}
 </style>
 """, unsafe_allow_html=True)
 
-# 4. UI 및 시간 로직 (요청하신 형식 반영)
+# 4. 상단 날짜 및 상태 관리
 st.markdown(f'<p class="date-title">📅 {now.strftime("%m월 %d일")} ({day_names[weekday]})</p>', unsafe_allow_html=True)
 
 if 'selected_meal' not in st.session_state:
     st.session_state.selected_meal = auto_meal
 
-# 카드 출력
+# [A] 메뉴 카드 출력
 display_date = now.strftime("%Y-%m-%d")
-curr_meal_info = meal_data.get(display_date, meal_data["2026-03-18"]).get(st.session_state.selected_meal, {"menu": "정보 없음", "side": ""})
+meal_info = meal_data.get(display_date, meal_data["2026-03-18"]).get(st.session_state.selected_meal, {"menu": "정보 없음", "side": ""})
 selected_color = color_theme[st.session_state.selected_meal]
 
-st.markdown(f'<div class="menu-card" style="--card-color: {selected_color};">...</div>', unsafe_allow_html=True) # (상세 내용은 생략)
+st.markdown(f"""
+    <div class="menu-card" style="--card-color: {selected_color};">
+        <div style="color: {selected_color}; font-size: 14px; font-weight: bold; margin-bottom: 8px;">{st.session_state.selected_meal}</div>
+        <div style="font-size: 26px; font-weight: 800; color: #111; margin-bottom: 12px;">{meal_info['menu']}</div>
+        <div style="height: 1px; background-color: #eee; width: 35%; margin: 0 auto;"></div>
+        <div class="side-menu">{meal_info['side']}</div>
+    </div>
+""", unsafe_allow_html=True)
 
-# 인덱스 탭 & 라디오 버튼
-# ... (중략: 인덱스 탭 생성 코드)
-selected = st.radio("식단선택", options=list(color_theme.keys()), index=list(color_theme.keys()).index(st.session_state.selected_meal), horizontal=True, label_visibility="collapsed")
+# [B] 인덱스 탭 (카드 바로 아래)
+tabs_html = '<div class="index-tabs-wrap">'
+for meal, color in color_theme.items():
+    opacity = "1.0" if meal == st.session_state.selected_meal else "0.3"
+    tabs_html += f'<div class="tab-unit" style="background-color: {color}; opacity: {opacity};">{meal}</div>'
+tabs_html += '</div>'
+st.markdown(tabs_html, unsafe_allow_html=True)
+
+# [C] 라디오 버튼 (줄바꿈 없음)
+selected = st.radio("식단선택", options=list(color_theme.keys()), 
+                    index=list(color_theme.keys()).index(st.session_state.selected_meal),
+                    horizontal=True, label_visibility="collapsed")
+
+if selected != st.session_state.selected_meal:
+    st.session_state.selected_meal = selected
+    st.rerun()
 
 # 5. 시간 계산 (몇 시간 몇 분)
 if st.session_state.selected_meal in meal_times:
     s_t, e_t = meal_times[st.session_state.selected_meal]
     s_dt, e_dt = datetime.combine(now.date(), s_t), datetime.combine(now.date(), e_t)
-    diff = (s_dt - now) if now < s_dt else (e_dt - now)
     
-    if diff.total_seconds() > 0:
+    if now < s_dt:
+        diff = s_dt - now
         h, m = diff.seconds // 3600, (diff.seconds % 3600) // 60
-        time_text = f"{h}시간 {m}분" if h > 0 else f"{m}분"
-        msg = f"{'⌛ 시작까지' if now < s_dt else '🍴 배식 종료까지'} {time_text} 남음"
+        msg = f"⏳ {st.session_state.selected_meal} 시작까지 {f'{h}시간 ' if h > 0 else ''}{m}분 남음"
+    elif now <= e_dt:
+        diff = e_dt - now
+        h, m = diff.seconds // 3600, (diff.seconds % 3600) // 60
+        msg = f"🍴 {st.session_state.selected_meal} 배식 중! 종료까지 {f'{h}시간 ' if h > 0 else ''}{m}분 남음"
     else:
-        msg = f"🚩 오늘의 {st.session_state.selected_meal} 배식이 완료되었습니다."
+        msg = f"🚩 오늘의 {st.session_state.selected_meal} 배식이 종료되었습니다."
 else:
     msg = f"💡 {st.session_state.selected_meal} 메뉴를 확인 중입니다."
 
