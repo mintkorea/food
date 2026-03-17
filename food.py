@@ -2,21 +2,22 @@ import streamlit as st
 from datetime import datetime, timedelta, time
 from zoneinfo import ZoneInfo
 
-# 1. 기초 설정
+# 1. 기초 설정 및 시간대
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="식단 가이드", page_icon="🍴", layout="centered")
 
-# 근무조 계산 함수
+# 근무조 계산 (대관현황 로직)
 def get_work_shift(d):
     anchor = datetime(2026, 3, 13).date()
     diff = (d - anchor).days
     shifts = [{"n": "A조", "bg": "#FF9800"}, {"n": "B조", "bg": "#E91E63"}, {"n": "C조", "bg": "#2196F3"}]
     return shifts[diff % 3]
 
-# 2. 시간 기준 자동 선택 로직
+# 2. 시간 기준 자동 선택 및 날짜 처리
 now_dt = datetime.now(KST)
+curr_date = now_dt.date()
 curr_t = now_dt.time()
 
 def get_default_meal():
@@ -30,34 +31,34 @@ if 'target_date' not in st.session_state:
 if 'selected_meal' not in st.session_state:
     st.session_state.selected_meal = get_default_meal()
 
-# URL 파라미터 처리 (날짜 이동 대응)
+# URL 파라미터 처리
 url_params = st.query_params
 if "d" in url_params:
     try:
         st.session_state.target_date = datetime.strptime(url_params["d"], "%Y-%m-%d").date()
     except: pass
 
-# 3. 데이터 세트 (샘플 데이터 보강)
+# 3. 전체 식단 데이터 (요청하신 데이터 모두 포함)
 meal_data = {
     "2026-03-17": {
-        "중식": {"menu": "버섯불고기", "side": "혼합잡곡밥, 근대국, 쌈채소, 배추겉절이"},
-        "야식": {"menu": "돈사태떡찜", "side": "흰쌀밥, 유채된장국, 멸치볶음, 요구르트"}
+        "중식": {"menu": "버섯불고기", "side": "혼합잡곡밥, 근대국, 쌈채소, 된장, 배추겉절이"},
+        "야식": {"menu": "돈사태떡찜", "side": "흰쌀밥, 유채된장국, 땅콩드레싱샐러드, 멸치볶음, 요구르트"}
     },
     "2026-03-18": {
-        "조식": {"menu": "감자수제비", "side": "흰쌀밥, 돈채가지볶음, 양념고추지, 깍두기"},
-        "중식": {"menu": "뼈없는닭볶음탕", "side": "혼합잡곡밥, 팽이장국, 유부겨자냉채, 열무김치, 복분자주스"},
-        "석식": {"menu": "하이디라오마라탕", "side": "분모자+포두부+소세지 & 탕수육, 흰쌀밥, 짜사이, 열무김치"}
+        "조식": {"menu": "감자수제비", "side": "흰쌀밥, 돈채가지볶음, 양념고추지, 깍두기, 누룽지/원두커피"},
+        "중식": {"menu": "뼈있는닭볶음탕", "side": "혼합잡곡밥, 팽이장국, 유부겨자냉채, 흑깨드레싱샐러드, 열무김치, 복분자주스"},
+        "석식": {"menu": "하이디라오마라탕", "side": "분모자+포두부+소세지 & 탕수육, 흰쌀밥, 짜사이무침, 열무김치"}
     },
     "2026-03-19": {
-        "조식": {"menu": "시래기장터국밥", "side": "모듬땡전, 케첩, 흰쌀밥, 깍두기"},
-        "중식": {"menu": "통등심돈까스", "side": "비빔막국수, 추가쌀밥, 미역국, 샐러드, 깍두기"}
+        "조식": {"menu": "시래기장터국밥", "side": "모듬땡전, 케첩, 흰쌀밥, 치커리유자무침, 깍두기"},
+        "중식": {"menu": "통등심돈까스", "side": "비빔막국수, 추가쌀밥, 미역국, 사우전드레싱샐러드, 깍두기"}
     }
 }
 
 color_theme = {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 meal_times = {"조식": (time(7, 0), time(9, 0)), "중식": (time(11, 20), time(14, 0)), "석식": (time(17, 20), time(19, 20))}
 
-# 4. CSS (레이아웃 고정)
+# 4. CSS (라디오 버튼 가로 고정 및 카드 높이 최적화)
 d = st.session_state.target_date
 shift = get_work_shift(d)
 w_idx = d.weekday()
@@ -76,13 +77,13 @@ st.markdown(f"""
     .menu-card {{ border: 3px solid var(--card-color); border-radius: 20px 20px 0 0; padding: 25px 15px; text-align: center; background: white; min-height: 200px; display: flex; flex-direction: column; justify-content: center; }}
     .index-tabs-wrap {{ display: flex; width: 100%; margin-top: -3px; }}
     .tab-unit {{ flex: 1; text-align: center; padding: 10px 0; font-size: 12px; font-weight: bold; color: white; }}
-    div[data-testid="stRadio"] > div {{ display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; background-color: #f1f3f5; padding: 10px 0px !important; border-radius: 0 0 20px 20px; }}
+    div[data-testid="stRadio"] > div {{ display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; background-color: #f1f3f5; padding: 10px 2px !important; border-radius: 0 0 20px 20px; }}
     div[data-testid="stRadio"] label p {{ font-size: 12px !important; font-weight: 800 !important; white-space: nowrap !important; }}
     .timer-box {{ text-align: center; background-color: #f8f9fa; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: bold; color: #555; margin-top: 15px; }}
 </style>
 """, unsafe_allow_html=True)
 
-# 5. 헤더 출력
+# 5. 헤더 및 네비게이션
 st.markdown(f"""
 <div class="date-display-box">
     <span class="res-main-title">🍽️ 성의교정 주간 식단</span>
@@ -96,7 +97,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 6. 식단 카드 출력 (데이터 부재 시 대응 로직)
+# 6. 식단 카드 출력
 date_key = d.strftime("%Y-%m-%d")
 meal_info = meal_data.get(date_key, {}).get(st.session_state.selected_meal, {"menu": "정보 없음", "side": "식단 정보가 등록되지 않았습니다."})
 selected_color = color_theme[st.session_state.selected_meal]
@@ -125,15 +126,26 @@ if selected != st.session_state.selected_meal:
     st.session_state.selected_meal = selected
     st.rerun()
 
-# 8. 시간 메시지
+# 8. 잔여 시간 계산 로직 개선 (날짜 구분 추가)
 msg = f"💡 {st.session_state.selected_meal} 메뉴를 확인 중입니다."
+
 if st.session_state.selected_meal in meal_times:
     s_t, e_t = meal_times[st.session_state.selected_meal]
-    s_dt, e_dt = datetime.combine(d, s_t).replace(tzinfo=KST), datetime.combine(d, e_t).replace(tzinfo=KST)
-    if now_dt < s_dt:
-        msg = f"⏳ {st.session_state.selected_meal} 시작까지 {(s_dt-now_dt).seconds//3600}시간 {((s_dt-now_dt).seconds%3600)//60}분 남음"
-    elif now_dt <= e_dt:
-        msg = f"🍴 {st.session_state.selected_meal} 배식 중! 종료까지 {(e_dt-now_dt).seconds//3600}시간 {((e_dt-now_dt).seconds%3600)//60}분 남음"
-    else:
-        msg = f"🚩 오늘의 {st.session_state.selected_meal} 배식이 종료되었습니다."
+    target_dt_s = datetime.combine(d, s_t).replace(tzinfo=KST)
+    target_dt_e = datetime.combine(d, e_t).replace(tzinfo=KST)
+
+    if d < curr_date: # 과거 날짜
+        msg = "🚩 이미 배식이 종료된 식단입니다."
+    elif d > curr_date: # 미래 날짜
+        msg = f"🗓️ {d.strftime('%m/%d')} 배식 예정인 식단입니다."
+    else: # 오늘 날짜
+        if now_dt < target_dt_s:
+            diff = target_dt_s - now_dt
+            msg = f"⏳ {st.session_state.selected_meal} 시작까지 {diff.seconds//3600}시간 {(diff.seconds%3600)//60}분 남음"
+        elif now_dt <= target_dt_e:
+            diff = target_dt_e - now_dt
+            msg = f"🍴 {st.session_state.selected_meal} 배식 중! 종료까지 {(diff.seconds%3600)//60}분 남음"
+        else:
+            msg = "🚩 이미 배식이 종료된 식단입니다."
+
 st.markdown(f'<div class="timer-box">{msg}</div>', unsafe_allow_html=True)
