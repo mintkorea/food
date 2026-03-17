@@ -1,89 +1,94 @@
 import streamlit as st
 
-# 1. 설정
-menu_cfg = {
-    "조": "#E95444", "간": "#F1A33B", "중": "#8BC34A", "석": "#4A90E2", "야": "#673AB7"
+# 1. 색상 테마 정의
+color_theme = {
+    "조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"
 }
 
-if 'active_meal' not in st.session_state:
-    st.session_state.active_meal = "중"
-
-current = st.session_state.active_meal
-current_color = menu_cfg[current]
-
-# 2. CSS: 버튼 간격과 글자 크기를 완벽하게 제어
+# 2. CSS: 인덱스 파일 디자인 및 라디오 버튼 가로 고정
 st.markdown(f"""
 <style>
-    .main .block-container {{ max-width: 500px !important; padding: 10px !important; }}
+    /* 메인 컨테이너 최적화 (모바일용) */
+    .main .block-container {{ 
+        max-width: 500px !important; 
+        padding: 10px 5px !important; 
+    }}
 
-    /* 탭 메뉴 컨테이너 */
-    .custom-tab-bar {{
+    /* [디자인] 상단 인덱스 탭 그룹 */
+    .index-tabs {{
         display: flex;
-        justify-content: center; /* 중앙 정렬 */
-        gap: 8px; /* 여기서 버튼 사이의 실제 간격을 조절합니다 */
+        justify-content: space-around;
         width: 100%;
-        margin-bottom: -4px;
+        margin-bottom: -3px; /* 카드와 밀착 */
     }}
 
-    /* 개별 탭 버튼 디자인 */
-    .tab-btn {{
+    /* 각 인덱스 탭 스타일 */
+    .tab-item {{
         flex: 1;
-        padding: 12px 0;
         text-align: center;
-        font-size: 20px !important;
-        font-weight: 900;
-        border-radius: 12px 12px 0 0;
-        cursor: pointer;
-        border: none;
-        transition: 0.3s;
-        text-decoration: none;
-        display: inline-block;
+        padding: 10px 0;
+        border-radius: 10px 10px 0 0; /* 윗부분만 둥글게 */
+        font-size: 14px;
+        font-weight: bold;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }}
 
-    /* 비활성 탭: 배경색과 글자색을 동일하게 하여 '간격용 벽' 역할 수행 */
-    .tab-inactive {{
-        background-color: #f0f2f6;
-        color: #f0f2f6; /* 글자를 숨겨서 간격을 벌림 */
+    /* [기능] 라디오 버튼 가로 고정 */
+    div[data-testid="stRadio"] > div {{
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-around !important;
+        background-color: #f8f9fa;
+        padding: 10px 5px;
+        border-radius: 0 0 15px 15px; /* 아래부분만 둥글게 */
     }}
 
-    /* 활성 탭: 테마 색상 적용 및 글자 노출 */
-    .tab-active {{
-        background-color: {current_color};
-        color: white !important;
-        box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+    /* 라디오 버튼 원형 크기 및 간격 조절 */
+    div[data-testid="stRadio"] label div:first-child {{
+        transform: scale(1.1);
+        margin: 0 !important;
     }}
 
-    /* 하단 인덱스 카드 */
-    .index-body {{
-        border: 4px solid {current_color};
-        border-radius: 0 0 20px 20px;
-        padding: 50px 20px;
-        text-align: center;
-        background-color: white;
-    }}
+    /* 불필요한 레이블 숨기기 */
+    div[data-testid="stRadio"] > label {{ display: none !important; }}
 </style>
 """, unsafe_allow_html=True)
 
-# 3. HTML로 구현한 탭 바 (st.button 대신 query_params나 상태 업데이트 활용)
-# Streamlit의 radio 대신 직접 버튼을 시뮬레이션합니다.
-cols = st.columns(5)
-meals = list(menu_cfg.keys())
+# 초기 선택 상태 설정
+if 'selected_meal' not in st.session_state:
+    st.session_state.selected_meal = "중식"
 
-# 버튼 배치 영역
-for i, meal in enumerate(meals):
-    with cols[i]:
-        # 선택 여부에 따른 클래스 결정
-        is_active = meal == current
-        # 버튼을 누르면 상태 변경
-        if st.button(meal, key=f"m_{meal}", use_container_width=True):
-            st.session_state.active_meal = meal
-            st.rerun()
+# 3. 디자인 영역: HTML 인덱스 파일 디자인 (첫 번째 이미지 기반)
+tabs_html = '<div class="index-tabs">'
+for meal, color in color_theme.items():
+    # 선택된 메뉴는 선명하게, 나머지는 불투명하게
+    opacity = "1.0" if meal == st.session_state.selected_meal else "0.3"
+    tabs_html += f'<div class="tab-item" style="background-color: {color}; opacity: {opacity};">{meal}</div>'
+tabs_html += '</div>'
 
-# 4. 하단 일체형 카드 디자인
-full_names = {"조": "조식", "간": "간편식", "중": "중식", "석": "석식", "야": "야식"}
+st.markdown(tabs_html, unsafe_allow_html=True)
+
+# 4. 카드 영역 디자인
+selected_color = color_theme[st.session_state.selected_meal]
 st.markdown(f"""
-    <div class="index-body">
-        <h2 style="color: {current_color}; margin: 0; font-size: 24px;">{full_names[current]}</h2>
-        <h1 style="color: {current_color}; margin: 10px 0; font-size: 48px; font-weight: 900;">MENU</h1>
+    <div style="border: 3px solid {selected_color}; border-radius: 0 0 15px 15px; padding: 30px; text-align: center; background-color: white;">
+        <h1 style="color: {selected_color}; margin: 0; font-size: 32px;">{st.session_state.selected_meal}</h1>
+        <p style="color: #666; margin-top: 5px;">선택한 식단의 메뉴를 확인하세요</p>
     </div>
 """, unsafe_allow_html=True)
+
+# 5. 기능 영역: 가로 라디오 버튼 배치 (세 번째 이미지 기반)
+# 레이블을 collapsed로 설정하여 불필요한 제목을 숨깁니다.
+selected = st.radio(
+    "meal_nav", 
+    options=list(color_theme.keys()), 
+    index=list(color_theme.keys()).index(st.session_state.selected_meal),
+    horizontal=True,
+    label_visibility="collapsed" 
+)
+
+# 선택 값이 바뀌면 세션 상태 업데이트 후 새로고침
+if selected != st.session_state.selected_meal:
+    st.session_state.selected_meal = selected
+    st.rerun()
