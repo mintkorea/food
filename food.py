@@ -28,44 +28,46 @@ current_sel = st.session_state.active_meal
 bold_c = color_theme[current_sel]["idx"]
 soft_bg = color_theme[current_sel]["bg"]
 
-# 3. CSS: 가로 일렬 강제 정렬 (Flexbox)
+# 3. CSS: 가로 정렬 및 버튼 크기 고정
 st.markdown(f"""
 <style>
-    /* 메인 컨테이너 여백 최적화 */
+    /* 메인 컨테이너 */
     .main .block-container {{
-        padding: 10px 10px 100px 10px !important;
-        max-width: 500px !important;
+        padding: 10px 15px !important;
+        max-width: 450px !important;
     }}
 
-    /* 식단 카드 스타일 */
+    /* 식단 카드 */
     .main-card {{
         background-color: {soft_bg};
         border: 2px solid {bold_c};
         border-radius: 20px;
         padding: 30px 15px;
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
     }}
 
-    /* ★ 가로 한 줄 강제 정렬 핵심 ★ */
+    /* ★ 가로 버튼 뭉치 중앙 정렬 및 너비 제한 ★ */
     div[data-testid="stHorizontalBlock"] {{
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important; /* 줄바꿈 절대 금지 */
-        justify-content: space-between !important;
-        gap: 4px !important;
+        justify-content: center !important; /* 중앙으로 모음 */
+        align-items: center !important;
+        gap: 8px !important; /* 버튼 사이 간격 */
+        width: 100% !important;
     }}
 
-    /* 버튼 스타일 조정 (글자 크기 및 여백) */
+    /* 개별 버튼 크기 강제 고정 */
     button[key^="btn_"] {{
-        flex: 1 !important; /* 모든 버튼이 동일한 폭 점유 */
-        padding: 10px 0 !important;
+        min-width: 65px !important; /* 너무 좁아지지 않게 */
+        max-width: 80px !important; /* 너무 넓어지지 않게 */
+        height: 42px !important;
+        padding: 0 !important;
         font-size: 13px !important;
         border: none !important;
         color: white !important;
-        border-radius: 8px !important;
-        min-width: 0 !important; /* 폭 축소 허용 */
-        white-space: nowrap !important; /* 텍스트 줄바꿈 방지 */
+        border-radius: 10px !important;
+        flex: none !important; /* 늘어나지 않도록 설정 */
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -83,8 +85,8 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# 5. 하단 버튼 배치
-cols = st.columns(5)
+# 5. 하단 버튼 (중앙 정렬)
+cols = st.columns([1,1,1,1,1]) # 동일 비율
 meals = ["조식", "간편식", "중식", "석식", "야식"]
 
 for i, meal in enumerate(meals):
@@ -96,7 +98,7 @@ for i, meal in enumerate(meals):
         button[key="btn_{meal}"] {{
             background-color: {m_color} !important;
             opacity: {1.0 if is_active else 0.4} !important;
-            box-shadow: {"0 4px 8px rgba(0,0,0,0.2)" if is_active else "none"} !important;
+            box-shadow: {"0 4px 10px rgba(0,0,0,0.1)" if is_active else "none"} !important;
         }}
         </style>
     """, unsafe_allow_html=True)
