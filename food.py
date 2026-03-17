@@ -10,73 +10,69 @@ if 'active_meal' not in st.session_state:
 
 current = st.session_state.active_meal
 
-# 2. 강력한 CSS: 라디오 버튼을 가로 탭 버튼으로 변신
+# 2. 강력한 CSS: 공백 컬럼과 버튼 컬럼의 비율 고정
 st.markdown(f"""
 <style>
-    /* 전체 너비 최적화 */
     .main .block-container {{ max-width: 500px !important; padding: 10px !important; }}
 
-    /* 라디오 버튼 컨테이너를 가로로 강제 정렬하고 간격을 0으로 */
-    div[data-testid="stRadio"] > div {{
+    /* [핵심] 9개의 컬럼이 모바일에서도 무조건 가로 한 줄을 유지하도록 강제 */
+    [data-testid="stHorizontalBlock"] {{
         display: flex !important;
         flex-direction: row !important;
-        justify-content: space-between !important;
-        gap: 2px !important; /* 버튼 사이 아주 미세한 간격 */
+        flex-wrap: nowrap !important;
+        align-items: center !important;
     }}
 
-    /* 라디오 버튼 각각을 균등한 너비의 버튼 모양으로 변경 */
-    div[data-testid="stRadio"] label {{
+    /* 버튼이 들어있는 컬럼과 공백 컬럼의 크기 조절 */
+    [data-testid="column"] {{
         flex: 1 !important;
-        background-color: #f0f2f6 !important; /* 기본 배경색 */
-        border-radius: 8px !important;
-        padding: 15px 0 !important;
-        justify-content: center !important;
-        border: none !important;
-        margin: 0 !important;
-        transition: 0.2s;
+        min-width: 0 !important;
     }}
 
-    /* 선택된 버튼에 테마 색상 입히기 */
-    div[data-testid="stRadio"] label[data-baseweb="radio"] {{
-        background-color: {color_theme[current]} !important;
-        color: white !important;
+    /* 버튼 스타일 최적화 */
+    div.stButton > button {{
+        width: 100% !important;
+        height: 45px !important;
+        padding: 0 !important;
+        font-size: 12px !important; /* 모바일 가독성 위해 약간 축소 */
         font-weight: bold !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        color: white !important;
+        border-radius: 8px !important;
+        border: none !important;
     }}
 
-    /* 라디오 원형 버튼 숨기기 */
-    div[data-testid="stRadio"] label div:first-child {{ display: none !important; }}
-    
-    /* 기존 라디오 레이블 문구 숨기기 */
-    div[data-testid="stRadio"] > label {{ display: none !important; }}
+    /* 메뉴별 고유 색상 적용 */
+    div[data-testid="column"]:nth-of-type(1) button {{ background-color: {color_theme["조식"]} !important; opacity: {1.0 if current == "조식" else 0.4}; }}
+    div[data-testid="column"]:nth-of-type(3) button {{ background-color: {color_theme["간편식"]} !important; opacity: {1.0 if current == "간편식" else 0.4}; }}
+    div[data-testid="column"]:nth-of-type(5) button {{ background-color: {color_theme["중식"]} !important; opacity: {1.0 if current == "중식" else 0.4}; }}
+    div[data-testid="column"]:nth-of-type(7) button {{ background-color: {color_theme["석식"]} !important; opacity: {1.0 if current == "석식" else 0.4}; }}
+    div[data-testid="column"]:nth-of-type(9) button {{ background-color: {color_theme["야식"]} !important; opacity: {1.0 if current == "야식" else 0.4}; }}
 
     .meal-card {{
         border: 2px solid {color_theme[current]};
-        border-radius: 20px; padding: 30px 10px; text-align: center;
-        background-color: white; margin-bottom: 20px;
+        border-radius: 15px; padding: 25px 10px; text-align: center;
+        margin-bottom: 20px;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 상단 결과 카드
-st.markdown(f"""
-    <div class="meal-card">
-        <h2 style="color: {color_theme[current]}; margin: 0;">{current}</h2>
-        <p style="color: #666; margin-top: 5px;">선택한 식단의 메뉴를 확인하세요</p>
-    </div>
-""", unsafe_allow_html=True)
+# 3. 상단 UI
+st.title("🍴 오늘의 식단")
+st.markdown(f'<div class="meal-card"><h2 style="color: {color_theme[current]}; margin: 0;">{current}</h2></div>', unsafe_allow_html=True)
 
-# 4. 가로 통합 라디오 버튼 (실제 조작부)
-# 이 하나가 5개의 버튼 역할을 모두 수행하며 모바일에서도 벌어지지 않습니다.
-selected = st.radio(
-    "meal_selector",
-    options=list(color_theme.keys()),
-    index=list(color_theme.keys()).index(current),
-    horizontal=True,
-    label_visibility="collapsed"
-)
+# 4. 9컬럼 시스템 가동 (홀수: 버튼, 짝수: 공백)
+cols = st.columns([1, 0.2, 1, 0.2, 1, 0.2, 1, 0.2, 1]) # 공백 컬럼은 0.2 비율로 좁게 설정
 
-# 상태 업데이트 및 리런
-if selected != st.session_state.active_meal:
-    st.session_state.active_meal = selected
-    st.rerun()
+meals = list(color_theme.keys())
+meal_index = 0
+
+for i in range(9):
+    if i % 2 == 0: # 홀수번째 컬럼 (0, 2, 4, 6, 8)에 버튼 배치
+        meal_name = meals[meal_index]
+        if cols[i].button(meal_name, key=f"btn_{meal_name}"):
+            st.session_state.active_meal = meal_name
+            st.rerun()
+        meal_index += 1
+    else:
+        # 짝수번째 컬럼 (1, 3, 5, 7)은 빈 공간으로 둠
+        cols[i].write("")
