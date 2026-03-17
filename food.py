@@ -1,6 +1,6 @@
 import streamlit as st
 
-# 1. 설정 및 상태 관리
+# 1. 설정
 menu_cfg = {
     "조": "#E95444", "간": "#F1A33B", "중": "#8BC34A", "석": "#4A90E2", "야": "#673AB7"
 }
@@ -11,89 +11,79 @@ if 'active_meal' not in st.session_state:
 current = st.session_state.active_meal
 current_color = menu_cfg[current]
 
-# 2. CSS: 라디오 버튼 폰트 조절 및 인덱스 디자인
+# 2. CSS: 버튼 간격과 글자 크기를 완벽하게 제어
 st.markdown(f"""
 <style>
     .main .block-container {{ max-width: 500px !important; padding: 10px !important; }}
 
-    /* 라디오 버튼 그룹 설정 */
-    [data-testid="stRadio"] > div {{
-        display: flex !important;
-        flex-direction: row !important;
-        justify-content: space-between !important;
-        padding: 0 5px !important;
-        margin-bottom: -4px !important; /* 카드와 밀착 */
+    /* 탭 메뉴 컨테이너 */
+    .custom-tab-bar {{
+        display: flex;
+        justify-content: center; /* 중앙 정렬 */
+        gap: 8px; /* 여기서 버튼 사이의 실제 간격을 조절합니다 */
+        width: 100%;
+        margin-bottom: -4px;
     }}
 
-    /* 라디오 버튼 레이블(글자) 스타일 */
-    [data-testid="stRadio"] label {{
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
+    /* 개별 탭 버튼 디자인 */
+    .tab-btn {{
+        flex: 1;
+        padding: 12px 0;
+        text-align: center;
+        font-size: 20px !important;
+        font-weight: 900;
+        border-radius: 12px 12px 0 0;
         cursor: pointer;
-        flex: 1 !important;
-    }}
-
-    /* [폰트/간격] 배경색과 동일한 글자로 간격을 벌리는 효과 */
-    [data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {{
-        font-size: 20px !important; /* 글자 크기 확대 */
-        font-weight: 900 !important;
-        width: 100% !important;
-        text-align: center !important;
-        padding: 12px 0 !important;
-        border-radius: 12px 12px 0 0 !important;
-        background-color: #f0f2f6 !important; /* 기본 배경색 */
-        color: #f0f2f6 !important; /* 배경과 같은 색으로 글자를 숨겨 간격 확보 */
+        border: none;
         transition: 0.3s;
-        border: 1px solid transparent;
+        text-decoration: none;
+        display: inline-block;
     }}
 
-    /* 선택된 버튼: 글자가 보이고 배경색이 테마색으로 변경 */
-    [data-testid="stRadio"] label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p {{
-        background-color: {current_color} !important;
-        color: white !important; /* 선택될 때만 글자 노출 */
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    /* 비활성 탭: 배경색과 글자색을 동일하게 하여 '간격용 벽' 역할 수행 */
+    .tab-inactive {{
+        background-color: #f0f2f6;
+        color: #f0f2f6; /* 글자를 숨겨서 간격을 벌림 */
     }}
 
-    /* 하단 인덱스 카드 디자인 */
-    .index-card-body {{
+    /* 활성 탭: 테마 색상 적용 및 글자 노출 */
+    .tab-active {{
+        background-color: {current_color};
+        color: white !important;
+        box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+    }}
+
+    /* 하단 인덱스 카드 */
+    .index-body {{
         border: 4px solid {current_color};
         border-radius: 0 0 20px 20px;
-        padding: 40px 20px;
+        padding: 50px 20px;
         text-align: center;
         background-color: white;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    }}
-
-    /* 라디오 원형 버튼 색상 */
-    div[data-testid="stRadio"] div[role="radiogroup"] input[checked] + div {{
-        background-color: {current_color} !important;
-        border-color: {current_color} !important;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 상단 라디오 버튼 (간격 확보형)
-# 실제 값은 보이지 않다가 선택 시에만 '조, 간, 중...'이 나타납니다.
-selected = st.radio(
-    "nav",
-    options=list(menu_cfg.keys()),
-    index=list(menu_cfg.keys()).index(current),
-    horizontal=True,
-    label_visibility="collapsed"
-)
+# 3. HTML로 구현한 탭 바 (st.button 대신 query_params나 상태 업데이트 활용)
+# Streamlit의 radio 대신 직접 버튼을 시뮬레이션합니다.
+cols = st.columns(5)
+meals = list(menu_cfg.keys())
 
-# 4. 하단 일체형 카드
+# 버튼 배치 영역
+for i, meal in enumerate(meals):
+    with cols[i]:
+        # 선택 여부에 따른 클래스 결정
+        is_active = meal == current
+        # 버튼을 누르면 상태 변경
+        if st.button(meal, key=f"m_{meal}", use_container_width=True):
+            st.session_state.active_meal = meal
+            st.rerun()
+
+# 4. 하단 일체형 카드 디자인
 full_names = {"조": "조식", "간": "간편식", "중": "중식", "석": "석식", "야": "야식"}
 st.markdown(f"""
-    <div class="index-card-body">
-        <h2 style="color: {current_color}; margin: 0; font-size: 22px;">{full_names[current]}</h2>
-        <h1 style="color: {current_color}; margin: 10px 0; font-size: 45px; font-weight: 900;">MENU</h1>
-        <p style="color: #888;">맛있는 식사가 준비되어 있습니다.</p>
+    <div class="index-body">
+        <h2 style="color: {current_color}; margin: 0; font-size: 24px;">{full_names[current]}</h2>
+        <h1 style="color: {current_color}; margin: 10px 0; font-size: 48px; font-weight: 900;">MENU</h1>
     </div>
 """, unsafe_allow_html=True)
-
-# 상태 업데이트
-if selected != st.session_state.active_meal:
-    st.session_state.active_meal = selected
-    st.rerun()
