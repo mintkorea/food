@@ -28,86 +28,81 @@ current_sel = st.session_state.active_meal
 bold_c = color_theme[current_sel]["idx"]
 soft_bg = color_theme[current_sel]["bg"]
 
-# 3. CSS: 클릭 경로 확보 및 강제 위치 고정
+# 3. CSS: 하단 가로 버튼 및 카드 디자인
 st.markdown(f"""
 <style>
-    /* 메인 앱 레이아웃 강제 조정 */
+    /* 메인 컨테이너 너비 제한 */
     .main .block-container {{
-        padding-right: 70px !important;
-        padding-left: 10px !important;
-        max-width: 500px !important;
+        max-width: 450px !important;
+        padding: 20px 15px !important;
     }}
 
-    /* 버튼들을 담는 최상위 컨테이너 강제 고정 */
-    /* pointer-events: none으로 설정하여 빈 공간 클릭 시 본문을 방해하지 않게 함 */
-    div[data-testid="stVerticalBlock"] > div:has(button[key^="btn_"]) {{
-        position: fixed !important;
-        right: 0px !important;
-        top: 15% !important;
-        width: 65px !important;
-        z-index: 999999 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        pointer-events: auto !important; /* 버튼 자체는 클릭 가능하게 */
-    }}
-
-    /* 실제 Streamlit 버튼 스타일 오버라이드 */
-    button[key^="btn_"] {{
-        writing-mode: vertical-rl !important;
-        text-orientation: upright !important;
-        height: 85px !important;
-        width: 55px !important;
-        min-width: 55px !important;
-        border-radius: 12px 0 0 12px !important;
-        border: none !important;
-        color: white !important;
-        font-weight: bold !important;
-        margin-bottom: 2px !important;
-        padding: 0 !important;
-        /* 터치 반응성 향상 */
-        touch-action: manipulation !important;
-    }}
-
-    /* 메인 식단 카드 */
+    /* 식단 카드 스타일 */
     .main-card {{
         background-color: {soft_bg};
         border: 2px solid {bold_c};
         border-radius: 20px;
-        padding: 35px 15px;
+        padding: 40px 20px;
         text-align: center;
-        min-height: 400px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }}
+
+    /* 가로 버튼 컨테이너 */
+    div[data-testid="stHorizontalBlock"] {{
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 15px;
+        gap: 5px !important;
+    }}
+
+    /* 버튼 공통 스타일 */
+    button[key^="btn_"] {{
+        width: 100% !important;
+        border: none !important;
+        padding: 10px 0 !important;
+        font-weight: bold !important;
+        font-size: 14px !important;
+        border-radius: 10px !important;
+        color: white !important;
+        transition: all 0.2s ease;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# 4. 메인 UI
-st.title("🍴 오늘의 식사")
+# 4. 메인 UI 구성
+st.title("🍴 오늘의 식단")
 
+# 식단 카드 표시
 st.markdown(f"""
     <div class="main-card">
-        <h2 style="color: {bold_c};">{current_sel}</h2>
-        <div style="width: 40px; height: 3px; background-color: {bold_c}; margin: 15px auto;"></div>
-        <p style="font-size: 24px; font-weight: bold; color: #333; margin-top: 25px;">🍲 {menu_data[current_sel][0]}</p>
+        <h2 style="color: {bold_c}; margin-bottom: 5px;">{current_sel}</h2>
+        <p style="font-size: 13px; color: #999; margin-bottom: 20px;">2026-03-17(화)</p>
+        <p style="font-size: 24px; font-weight: 800; color: #333;">🍲 {menu_data[current_sel][0]}</p>
         <p style="font-size: 16px; color: #666; margin-top: 20px; line-height: 1.8;">
             {' / '.join(menu_data[current_sel][1:])}
         </p>
     </div>
 """, unsafe_allow_html=True)
 
-# 5. 버튼 렌더링 (이 위치가 CSS에 의해 고정됨)
-for meal in ["조식", "간편식", "중식", "석식", "야식"]:
+# 5. 하단 가로 일렬 버튼 (5컬럼 레이아웃)
+cols = st.columns(5)
+meals = ["조식", "간편식", "중식", "석식", "야식"]
+
+for i, meal in enumerate(meals):
     is_active = (meal == current_sel)
     m_color = color_theme[meal]["idx"]
     
-    # 버튼별 색상 및 활성화 투명도
+    # 버튼별 개별 스타일 적용
     st.markdown(f"""
         <style>
         button[key="btn_{meal}"] {{
             background-color: {m_color} !important;
-            opacity: {1.0 if is_active else 0.45} !important;
-            box-shadow: {"-4px 0 10px rgba(0,0,0,0.2)" if is_active else "none"} !important;
+            opacity: {1.0 if is_active else 0.3} !important;
+            transform: {"scale(1.05)" if is_active else "scale(1.0)"};
+            box-shadow: {"0 4px 8px rgba(0,0,0,0.2)" if is_active else "none"} !important;
         }}
         </style>
     """, unsafe_allow_html=True)
     
-    st.button(meal, key=f"btn_{meal}", on_click=update_meal, args=(meal,))
+    cols[i].button(meal, key=f"btn_{meal}", on_click=update_meal, args=(meal,))
