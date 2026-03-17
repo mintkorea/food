@@ -17,7 +17,7 @@ menu_data = {
     "야식": ["소고기미역죽", "돈육장조림", "깍두기", "블루베리요플레"]
 }
 
-# 2. 세션 상태 관리
+# 2. 세션 관리
 if 'active_meal' not in st.session_state:
     st.session_state.active_meal = "중식"
 
@@ -28,64 +28,65 @@ current_sel = st.session_state.active_meal
 bold_c = color_theme[current_sel]["idx"]
 soft_bg = color_theme[current_sel]["bg"]
 
-# 3. CSS: 하단 가로 버튼 및 카드 디자인
+# 3. CSS: 가로 정렬 강제 및 모바일 최적화
 st.markdown(f"""
 <style>
-    /* 메인 컨테이너 너비 제한 */
+    /* 메인 컨테이너 여백 조정 */
     .main .block-container {{
-        max-width: 450px !important;
-        padding: 20px 15px !important;
+        padding: 20px 10px !important;
+        max-width: 500px !important;
     }}
 
-    /* 식단 카드 스타일 */
+    /* 식단 카드 디자인 */
     .main-card {{
         background-color: {soft_bg};
         border: 2px solid {bold_c};
         border-radius: 20px;
-        padding: 40px 20px;
+        padding: 30px 15px;
         text-align: center;
         margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     }}
 
-    /* 가로 버튼 컨테이너 */
-    div[data-testid="stHorizontalBlock"] {{
-        background-color: #f8f9fa;
-        padding: 10px;
-        border-radius: 15px;
+    /* ★ 가로 정렬 핵심: 버튼들을 감싸는 영역을 Flexbox로 고정 */
+    .nav-container {{
+        display: flex !important;
+        flex-direction: row !important; /* 무조건 가로 */
+        justify-content: space-between !important;
         gap: 5px !important;
+        width: 100% !important;
+        margin-top: 10px;
     }}
 
-    /* 버튼 공통 스타일 */
-    button[key^="btn_"] {{
+    /* Streamlit 기본 버튼 스타일 초기화 및 재설정 */
+    div[data-testid="stHorizontalBlock"] button {{
         width: 100% !important;
+        min-width: 0 !important;
+        padding: 8px 2px !important;
+        font-size: 13px !important;
+        height: 45px !important;
         border: none !important;
-        padding: 10px 0 !important;
-        font-weight: bold !important;
-        font-size: 14px !important;
-        border-radius: 10px !important;
         color: white !important;
-        transition: all 0.2s ease;
+        border-radius: 10px !important;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# 4. 메인 UI 구성
-st.title("🍴 오늘의 식단")
+# 4. 메인 콘텐츠
+st.title("🍴 오늘의 식사")
 
-# 식단 카드 표시
 st.markdown(f"""
     <div class="main-card">
         <h2 style="color: {bold_c}; margin-bottom: 5px;">{current_sel}</h2>
-        <p style="font-size: 13px; color: #999; margin-bottom: 20px;">2026-03-17(화)</p>
-        <p style="font-size: 24px; font-weight: 800; color: #333;">🍲 {menu_data[current_sel][0]}</p>
-        <p style="font-size: 16px; color: #666; margin-top: 20px; line-height: 1.8;">
+        <p style="font-size: 24px; font-weight: 800; color: #333; margin-top: 20px;">🍲 {menu_data[current_sel][0]}</p>
+        <p style="font-size: 16px; color: #666; margin-top: 15px; line-height: 1.6;">
             {' / '.join(menu_data[current_sel][1:])}
         </p>
     </div>
 """, unsafe_allow_html=True)
 
-# 5. 하단 가로 일렬 버튼 (5컬럼 레이아웃)
+# 5. 하단 가로 일렬 버튼 (강제 가로 정렬)
+# container와 columns를 조합하되, CSS로 세로 전환을 막습니다.
+st.markdown('<div class="nav-container">', unsafe_allow_html=True)
 cols = st.columns(5)
 meals = ["조식", "간편식", "중식", "석식", "야식"]
 
@@ -93,16 +94,17 @@ for i, meal in enumerate(meals):
     is_active = (meal == current_sel)
     m_color = color_theme[meal]["idx"]
     
-    # 버튼별 개별 스타일 적용
+    # 각 버튼에 배경색과 활성화 투명도 적용
     st.markdown(f"""
         <style>
         button[key="btn_{meal}"] {{
             background-color: {m_color} !important;
-            opacity: {1.0 if is_active else 0.3} !important;
-            transform: {"scale(1.05)" if is_active else "scale(1.0)"};
-            box-shadow: {"0 4px 8px rgba(0,0,0,0.2)" if is_active else "none"} !important;
+            opacity: {1.0 if is_active else 0.35} !important;
+            box-shadow: {"0 4px 10px rgba(0,0,0,0.15)" if is_active else "none"} !important;
         }}
         </style>
     """, unsafe_allow_html=True)
     
-    cols[i].button(meal, key=f"btn_{meal}", on_click=update_meal, args=(meal,))
+    with cols[i]:
+        st.button(meal, key=f"btn_{meal}", on_click=update_meal, args=(meal,))
+st.markdown('</div>', unsafe_allow_html=True)
