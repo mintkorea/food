@@ -8,14 +8,14 @@ def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="식단 가이드", page_icon="🍴", layout="centered")
 
-# 근무조 계산 함수 (대관 현황 소스 참조)
+# 근무조 계산 함수
 def get_work_shift(d):
     anchor = datetime(2026, 3, 13).date()
     diff = (d - anchor).days
     shifts = [{"n": "A조", "bg": "#FF9800"}, {"n": "B조", "bg": "#E91E63"}, {"n": "C조", "bg": "#2196F3"}]
     return shifts[diff % 3]
 
-# 2. 현재 시간 기준 자동 식단 선택 로직
+# 2. 현재 시간 기준 자동 식단 선택
 now_dt = datetime.now(KST)
 curr_t = now_dt.time()
 
@@ -23,7 +23,7 @@ def get_default_meal():
     if curr_t < time(9, 0): return "조식"
     if curr_t < time(14, 0): return "중식"
     if curr_t < time(19, 20): return "석식"
-    return "중식" # 기본값
+    return "중식"
 
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
@@ -37,25 +37,21 @@ if "d" in url_params:
         st.session_state.target_date = datetime.strptime(url_params["d"], "%Y-%m-%d").date()
     except: pass
 
-# 3. 데이터 세트 (샘플 데이터)
+# 3. 데이터 세트 (메뉴명 수정 반영)
 meal_data = {
     "2026-03-18": {
         "조식": {"menu": "감자수제비", "side": "흰쌀밥, 돈채가지볶음, 양념고추지, 깍두기, 누룽지/원두커피"},
         "간편식": {"menu": "닭가슴살샐러드 & 바나나", "side": "신선한 계절 과일 포함"},
-        "중식": {"menu": "뼈없는닭볶음탕", "side": "혼합잡곡밥, 팽이장국, 유부겨자냉채, 흑깨드레싱샐러드, 열무김치, 복분자주스"},
+        "중식": {"menu": "뼈있는닭볶음탕", "side": "혼합잡곡밥, 팽이장국, 유부겨자냉채, 흑깨드레싱샐러드, 열무김치, 복분자주스"},
         "석식": {"menu": "하이디라오마라탕", "side": "분모자+포두부+소세지 & 탕수육, 후르츠소스, 흰쌀밥, 짜사이무침, 열무김치"},
         "야식": {"menu": "돈사태떡찜", "side": "흰쌀밥, 유채된장국, 땅콩드레싱샐러드, 멸치볶음, 양파장아찌, 요구르트"}
     }
 }
 
 color_theme = {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
-meal_times = {
-    "조식": (time(7, 0), time(9, 0)),
-    "중식": (time(11, 20), time(14, 0)),
-    "석식": (time(17, 20), time(19, 20))
-}
+meal_times = {"조식": (time(7, 0), time(9, 0)), "중식": (time(11, 20), time(14, 0)), "석식": (time(17, 20), time(19, 20))}
 
-# 4. CSS 스타일 (카드 높이 고정 및 타이틀 제거 반영)
+# 4. CSS 스타일 (라디오 버튼 줄바꿈 방지 및 카드 높이 축소)
 d = st.session_state.target_date
 shift = get_work_shift(d)
 w_idx = d.weekday()
@@ -85,26 +81,32 @@ st.markdown(f"""
         border-right: 1px solid #F0F0F0 !important; font-size: 13px !important;
     }}
 
-    /* 카드 높이 고정 (min-height) 및 상단 여백 조정 */
+    /* 카드 높이 3줄 정도 축소 (min-height 조정) */
     .menu-card {{ 
         border: 3px solid var(--card-color); border-radius: 20px 20px 0 0; 
-        padding: 40px 15px; text-align: center; background: white;
-        min-height: 280px; display: flex; flex-direction: column; justify-content: center;
+        padding: 25px 15px; text-align: center; background: white;
+        min-height: 200px; display: flex; flex-direction: column; justify-content: center;
     }}
     .index-tabs-wrap {{ display: flex; width: 100%; margin-top: -3px; }}
-    .tab-unit {{ flex: 1; text-align: center; padding: 10px 0; font-size: 13px !important; font-weight: bold; color: white; }}
+    .tab-unit {{ flex: 1; text-align: center; padding: 10px 0; font-size: 12px !important; font-weight: bold; color: white; }}
 
+    /* 라디오 버튼 줄바꿈 절대 방지 및 가로 정렬 강제 */
     div[data-testid="stRadio"] > div {{
-        display: flex !important; flex-wrap: nowrap !important; 
-        background-color: #f1f3f5; padding: 10px 2px !important; border-radius: 0 0 20px 20px;
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; 
+        justify-content: space-around !important; background-color: #f1f3f5; 
+        padding: 10px 0px !important; border-radius: 0 0 20px 20px;
     }}
-    div[data-testid="stRadio"] label p {{ font-size: 13px !important; font-weight: 800 !important; }}
+    div[data-testid="stStyledRadioButtonContainer"] {{ padding: 0px 5px !important; }}
+    div[data-testid="stRadio"] label p {{ 
+        font-size: 12px !important; font-weight: 800 !important; 
+        white-space: nowrap !important; word-break: keep-all !important;
+    }}
     
     .timer-box {{ text-align: center; background-color: #f8f9fa; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: bold; color: #555; margin-top: 15px; }}
 </style>
 """, unsafe_allow_html=True)
 
-# 5. 헤더 및 네비게이션 (근무조 포함)
+# 5. 헤더 및 네비게이션
 st.markdown(f"""
 <div class="date-display-box">
     <span class="res-main-title">🍽️ 성의교정 주간 식단</span>
@@ -118,7 +120,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 6. 식단 카드 (타이틀 제거 및 높이 고정)
+# 6. 식단 카드 (높이 축소 반영)
 date_key = d.strftime("%Y-%m-%d")
 daily_data = meal_data.get(date_key, {})
 meal_info = daily_data.get(st.session_state.selected_meal, {"menu": "정보 없음", "side": "식단 정보가 등록되지 않았습니다."})
@@ -126,13 +128,13 @@ selected_color = color_theme[st.session_state.selected_meal]
 
 st.markdown(f"""
     <div class="menu-card" style="--card-color: {selected_color};">
-        <div style="font-size: 28px; font-weight: 800; color: #111; margin-bottom: 15px;">{meal_info['menu']}</div>
-        <div style="height: 1px; background-color: #eee; width: 35%; margin: 0 auto;"></div>
-        <div style="color: #444; font-size: 17px; margin-top: 20px; line-height: 1.6; word-break: keep-all;">{meal_info['side']}</div>
+        <div style="font-size: 26px; font-weight: 800; color: #111; margin-bottom: 12px;">{meal_info['menu']}</div>
+        <div style="height: 1px; background-color: #eee; width: 30%; margin: 0 auto;"></div>
+        <div style="color: #444; font-size: 16px; margin-top: 15px; line-height: 1.5; word-break: keep-all;">{meal_info['side']}</div>
     </div>
 """, unsafe_allow_html=True)
 
-# 7. 인덱스 탭 및 라디오 버튼
+# 7. 인덱스 탭 및 라디오 버튼 (가로 정렬 고정)
 tabs_html = '<div class="index-tabs-wrap">'
 for meal, color in color_theme.items():
     opacity = "1.0" if meal == st.session_state.selected_meal else "0.3"
@@ -152,9 +154,7 @@ if selected != st.session_state.selected_meal:
 msg = f"💡 {st.session_state.selected_meal} 메뉴를 확인 중입니다."
 if st.session_state.selected_meal in meal_times:
     s_t, e_t = meal_times[st.session_state.selected_meal]
-    s_dt = datetime.combine(d, s_t).replace(tzinfo=KST)
-    e_dt = datetime.combine(d, e_t).replace(tzinfo=KST)
-    
+    s_dt, e_dt = datetime.combine(d, s_t).replace(tzinfo=KST), datetime.combine(d, e_t).replace(tzinfo=KST)
     if now_dt < s_dt:
         diff = s_dt - now_dt
         msg = f"⏳ {st.session_state.selected_meal} 시작까지 {diff.seconds//3600}시간 {(diff.seconds%3600)//60}분 남음"
