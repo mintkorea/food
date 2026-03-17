@@ -1,107 +1,100 @@
 import streamlit as st
 
-# 1. 페이지 설정
-st.set_page_config(page_title="오늘의 식사", layout="centered")
+# 1. 색상 및 식단 데이터 설정
+color_theme = {
+    "조식": {"idx": "#E95444", "bg": "#F9EBEA"},
+    "간편식": {"idx": "#F1A33B", "bg": "#FEF5E7"},
+    "중식": {"idx": "#8BC34A", "bg": "#F1F8E9"},
+    "석식": {"idx": "#4A90E2", "bg": "#EBF5FB"},
+    "야식": {"idx": "#673AB7", "bg": "#F4ECF7"}
+}
 
-# 2. 데이터 및 컬러 정의
 menu_data = {
-    "2026-03-17(화)": {
-        "조식": ["연포탕", "매운두부찜"], "간편식": ["샌드위치", "요거트"],
-        "중식": ["버섯불고기", "우엉채레몬튀김", "수수기장밥", "얼큰어묵탕", "수정과"],
-        "석식": ["멘치카츠", "가쓰오장국"], "야식": ["소고기미역죽"]
-    }
-}
-color_map = {
-    "조식": ("#E95444", "#FFF5F4"), "간편식": ("#F1A33B", "#FFF9F0"),
-    "중식": ("#8BC34A", "#F9FBF2"), "석식": ("#4A90E2", "#F0F7FF"), "야식": ("#673AB7", "#F7F2FF")
+    "조식": ["제철미나리쭈꾸미연포탕", "매운두부찜", "흰쌀밥", "모둠장아찌", "누룽지"],
+    "간편식": ["고로케양배추샌드위치", "삶은계란", "플레인요거트"],
+    "중식": ["버섯불고기", "우엉채레몬튀김", "수수기장밥", "얼큰어묵탕", "수정과"],
+    "석식": ["양배추멘치카츠", "가쓰오장국", "시저드레싱샐러드", "열무김치"],
+    "야식": ["소고기미역죽", "돈육장조림", "깍두기", "블루베리요플레"]
 }
 
-if 'selected_meal' not in st.session_state:
-    st.session_state.selected_meal = "중식"
+# 2. 세션 상태 초기화 및 콜백 함수 (오류 해결의 핵심)
+if 'meal_selection' not in st.session_state:
+    st.session_state.meal_selection = "중식"
 
-# 3. CSS 수정: 실제 버튼을 인덱스 탭처럼 디자인
-bold_c, soft_c = color_map[st.session_state.selected_meal]
+def change_meal(meal_name):
+    st.session_state.meal_selection = meal_name
+
+# 3. CSS: 인덱스 고정 및 디자인
+sel_meal = st.session_state.meal_selection
+bold_c = color_theme[sel_meal]["idx"]
+soft_bg = color_theme[sel_meal]["bg"]
 
 st.markdown(f"""
-    <style>
-    /* 전체 레이아웃 정렬 */
-    [data-testid="stHorizontalBlock"] {{
-        gap: 0px !important;
-    }}
-    
-    /* 카드 본체 디자인 */
-    .menu-card {{
-        background-color: {soft_c};
-        border: 3px solid {bold_c};
-        border-right: none;
-        border-radius: 20px 0 0 20px;
-        padding: 30px 20px;
+<style>
+    .main-card {{
+        background-color: {soft_bg};
+        border: 2.5px solid {bold_c};
+        border-radius: 15px 0 0 15px;
+        padding: 40px 20px;
+        margin-right: 52px;
+        min-height: 380px;
         text-align: center;
-        height: 400px;
+        transition: all 0.3s ease-in-out;
+    }}
+    .fixed-nav {{
+        position: fixed;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        gap: 4px;
+        z-index: 1000;
     }}
-
-    /* 오른쪽 버튼(인덱스) 세로 정렬 및 디자인 */
-    div[data-testid="stColumn"] > div > div > div > button {{
-        writing-mode: vertical-rl;
-        text-orientation: upright;
-        height: 80px !important; /* 400px / 5개 */
-        width: 45px !important;
-        margin: 0 !important;
-        border-radius: 0 10px 10px 0 !important;
-        border: 1px solid rgba(255,255,255,0.3) !important;
-        color: white !important;
-        font-weight: bold !important;
-        font-size: 13px !important;
-        padding: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }}
-    
-    /* 버튼들 사이의 간격 제거 */
-    div[data-testid="stVerticalBlock"] {{
-        gap: 0rem !important;
-    }}
-    </style>
+</style>
 """, unsafe_allow_html=True)
 
-# 4. 상단 날짜 선택
-st.markdown("### 🍴 오늘의 식사")
-selected_date = list(menu_data.keys())[0]
+# 4. UI 렌더링
+st.title("🍴 오늘의 식사")
+st.selectbox("날짜", ["2026-03-17(화)"], label_visibility="collapsed")
 
-# 5. 메인 레이아웃 (왼쪽 카드 + 오른쪽 세로 버튼들)
-col_card, col_tabs = st.columns([8, 1])
+# 메인 콘텐츠 영역
+menu = menu_data.get(sel_meal, ["정보 없음"])
+st.markdown(f"""
+    <div class="main-card">
+        <h2 style="color: {bold_c}; margin-bottom: 25px;">{sel_meal}</h2>
+        <p style="font-size: 24px; font-weight: bold; color: #333;">🍲 {menu[0]}</p>
+        <p style="font-size: 16px; color: #555; margin-top: 20px; line-height: 1.8;">
+            {' / '.join(menu[1:])}
+        </p>
+    </div>
+""", unsafe_allow_html=True)
 
-with col_card:
-    menu = menu_data[selected_date].get(st.session_state.selected_meal, ["정보 없음"])
+# 5. 고정 인덱스 버튼 (on_click 콜백 적용으로 오작동 방지)
+st.markdown('<div class="fixed-nav">', unsafe_allow_html=True)
+for meal in ["조식", "간편식", "중식", "석식", "야식"]:
+    m_color = color_theme[meal]["idx"]
+    is_active = (meal == sel_meal)
+    
+    # 각 버튼별 스타일 개별 적용
     st.markdown(f"""
-        <div class="menu-card">
-            <div style="color: {bold_c}; font-weight: bold; font-size: 18px; margin-bottom: 10px;">{st.session_state.selected_meal}</div>
-            <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 20px;">{menu[0]}</div>
-            <div style="font-size: 16px; color: #666; line-height: 1.8;">{' / '.join(menu[1:])}</div>
-        </div>
+        <style>
+        button[key="btn_{meal}"] {{
+            background-color: {m_color} !important;
+            opacity: {1.0 if is_active else 0.4};
+            color: white !important;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            height: 82px !important;
+            width: 46px !important;
+            border-radius: 0 10px 10px 0 !important;
+            border: none !important;
+            font-weight: bold !important;
+            box-shadow: {"2px 2px 10px rgba(0,0,0,0.3)" if is_active else "none"};
+        }}
+        </style>
     """, unsafe_allow_html=True)
-
-with col_tabs:
-    # 각 버튼에 배경색을 직접 입힘
-    for meal in ["조식", "간편식", "중식", "석식", "야식"]:
-        b_color = color_map[meal][0]
-        opacity = "1.0" if meal == st.session_state.selected_meal else "0.5"
-        
-        # 버튼 생성 및 클릭 이벤트
-        if st.button(meal, key=f"btn_{meal}"):
-            st.session_state.selected_meal = meal
-            st.rerun()
-        
-        # 생성된 버튼에 즉시 색상 입히기 (CSS 인젝션)
-        st.markdown(f"""
-            <style>
-            button[key="btn_{meal}"] {{
-                background-color: {b_color} !important;
-                opacity: {opacity} !important;
-            }}
-            </style>
-        """, unsafe_allow_html=True)
+    
+    # on_click을 사용하여 즉각적인 상태 변경 보장
+    st.button(meal, key=f"btn_{meal}", on_click=change_meal, args=(meal,))
+st.markdown('</div>', unsafe_allow_html=True)
