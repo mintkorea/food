@@ -17,7 +17,7 @@ menu_data = {
     "야식": ["소고기미역죽", "돈육장조림", "깍두기", "블루베리요플레"]
 }
 
-# 2. 세션 관리
+# 2. 세션 상태 관리
 if 'active_meal' not in st.session_state:
     st.session_state.active_meal = "중식"
 
@@ -28,86 +28,92 @@ current_sel = st.session_state.active_meal
 bold_c = color_theme[current_sel]["idx"]
 soft_bg = color_theme[current_sel]["bg"]
 
-# 3. CSS: 브라우저 뷰포트 기준 절대 위치 고정
+# 3. CSS: 진정한 플로팅 레이아웃 (본문과 완전 분리)
 st.markdown(f"""
 <style>
-    /* 메인 앱 여백 확보 */
+    /* 메인 컨테이너 여백 (플로팅 버튼 자리를 미리 비워둠) */
     .main .block-container {{
-        padding-right: 75px !important;
-        padding-left: 10px !important;
+        padding-right: 80px !important;
+        max-width: 500px !important; /* 모바일 가독성 최적화 */
     }}
 
-    /* 버튼들을 감싸는 부모 요소를 화면 우측 상단에 강제 고정 */
-    div[data-testid="stVerticalBlock"] > div:has(button[key^="btn_"]) {{
-        position: fixed !important;
-        right: 0px !important;
-        top: 100px !important;
-        width: 60px !important;
-        z-index: 1000000 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 0px !important;
-        background-color: transparent !important;
+    /* 플로팅 버튼들을 감싸는 박스 - 화면 우측 중앙 고정 */
+    div.floating-nav {{
+        position: fixed;
+        right: 0px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        z-index: 100000;
     }}
 
-    /* 버튼 공통 스타일 최적화 */
+    /* 각 버튼의 부모 div 스타일 */
+    div.floating-nav > div {{
+        margin-bottom: 2px;
+    }}
+
+    /* 실제 Streamlit 버튼 스타일 강제 오버라이드 */
     button[key^="btn_"] {{
         writing-mode: vertical-rl !important;
         text-orientation: upright !important;
-        height: 85px !important;
-        width: 55px !important;
-        min-width: 55px !important;
-        border-radius: 12px 0 0 12px !important;
-        border: 1px solid rgba(255,255,255,0.3) !important;
+        height: 80px !important;
+        width: 45px !important;
+        min-width: 45px !important;
+        border-radius: 15px 0 0 15px !important;
+        border: none !important;
         color: white !important;
         font-weight: bold !important;
-        margin-bottom: 2px !important;
         padding: 0 !important;
         font-size: 14px !important;
-        box-shadow: -2px 2px 5px rgba(0,0,0,0.1) !important;
-    }}
-
-    /* 메인 카드 디자인 */
-    .main-card {{
-        background-color: {soft_bg};
-        border: 2.5px solid {bold_c};
-        border-radius: 15px;
-        padding: 35px 20px;
-        text-align: center;
-        min-height: 400px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        line-height: 1 !important;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15) !important;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# 4. 메인 UI
+# 4. 메인 콘텐츠 (카드형 식단표)
 st.title("🍴 스마트 식단 가이드")
 
 st.markdown(f"""
-    <div class="main-card">
-        <h2 style="color: {bold_c}; margin-bottom: 10px;">{current_sel}</h2>
-        <div style="width: 50px; height: 3px; background-color: {bold_c}; margin: 0 auto 25px;"></div>
-        <p style="font-size: 24px; font-weight: bold; color: #333;">🍲 {menu_data[current_sel][0]}</p>
-        <p style="font-size: 16px; color: #555; margin-top: 20px; line-height: 1.8;">
+    <div style="
+        background-color: {soft_bg};
+        border: 2px solid {bold_c};
+        border-radius: 20px;
+        padding: 30px 20px;
+        text-align: center;
+        min-height: 350px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+    ">
+        <h2 style="color: {bold_c}; margin-bottom: 5px;">{current_sel}</h2>
+        <p style="font-size: 13px; color: #999; margin-bottom: 25px;">2026-03-17(화)</p>
+        <p style="font-size: 24px; font-weight: 800; color: #333;">🍲 {menu_data[current_sel][0]}</p>
+        <p style="font-size: 16px; color: #666; margin-top: 20px; line-height: 1.8;">
             {' / '.join(menu_data[current_sel][1:])}
         </p>
     </div>
 """, unsafe_allow_html=True)
 
-# 5. 버튼 렌더링 (CSS가 이 위치를 잡아 우측에 고정함)
-for meal in ["조식", "간편식", "중식", "석식", "야식"]:
-    is_active = (meal == current_sel)
-    m_color = color_theme[meal]["idx"]
-    
-    st.markdown(f"""
-        <style>
-        button[key="btn_{meal}"] {{
-            background-color: {m_color} !important;
-            opacity: {1.0 if is_active else 0.35} !important;
-            transform: {"translateX(-5px)" if is_active else "none"};
-            transition: all 0.2s ease;
-        }}
-        </style>
-    """, unsafe_allow_html=True)
-    
-    st.button(meal, key=f"btn_{meal}", on_click=update_meal, args=(meal,))
+# 5. 플로팅 버튼 영역 (핵심: 컨테이너를 사용하여 묶어줌)
+# empty()를 사용해 레이아웃 하단에 배치해도 CSS로 상단 고정
+floating_container = st.container()
+with floating_container:
+    # 이 div 클래스가 CSS fixed의 타겟이 됨
+    st.markdown('<div class="floating-nav">', unsafe_allow_html=True)
+    for meal in ["조식", "간편식", "중식", "석식", "야식"]:
+        is_active = (meal == current_sel)
+        m_color = color_theme[meal]["idx"]
+        
+        # 버튼별 활성화 효과
+        st.markdown(f"""
+            <style>
+            button[key="btn_{meal}"] {{
+                background-color: {m_color} !important;
+                opacity: {1.0 if is_active else 0.4} !important;
+                transform: {"scaleX(1.1)" if is_active else "none"} !important;
+            }}
+            </style>
+        """, unsafe_allow_html=True)
+        
+        st.button(meal, key=f"btn_{meal}", on_click=update_meal, args=(meal,))
+    st.markdown('</div>', unsafe_allow_html=True)
