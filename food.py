@@ -41,7 +41,19 @@ def get_work_shift(target_date):
 CSV_URL = "https://docs.google.com/spreadsheets/d/1l07s4rubmeB5ld8oJayYrstL34UPKtxQwYptIocgKV0/export?format=csv"
 
 # 헤더 선출력 (사용자 응답성 향상)
-st.markdown('<div style="text-align:center; padding:10px;"><h2 style="color:#1E3A5F; margin-bottom:0;">🍽️ 성의교정 주간 식단</h2></div>', unsafe_allow_html=True)
+st.markdown("""
+<div style="text-align:center; padding: 15px 0 5px 0;">
+    <span style="
+        font-size: 20px !important; 
+        font-weight: 800; 
+        color: #1E3A5F; 
+        letter-spacing: -0.5px;
+        white-space: nowrap;
+    ">
+        🍽️ 성의교정 주간 식단 가이드
+    </span>
+</div>
+""", unsafe_allow_html=True)
 
 with st.spinner('최신 식단 정보를 가져오고 있습니다...'):
     meal_data = load_meal_data(CSV_URL)
