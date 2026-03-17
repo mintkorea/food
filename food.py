@@ -1,105 +1,106 @@
 import streamlit as st
 
-st.set_page_config(page_title="오늘의 식사", layout="centered")
+# 1. 색상 테마 (인덱스: 선명 / 카드배경: 파스텔)
+color_theme = {
+    "조식": {"idx": "#E95444", "bg": "#F9EBEA"},
+    "간편식": {"idx": "#F1A33B", "bg": "#FEF5E7"},
+    "중식": {"idx": "#8BC34A", "bg": "#F1F8E9"},
+    "석식": {"idx": "#4A90E2", "bg": "#EBF5FB"},
+    "야식": {"idx": "#673AB7", "bg": "#F4ECF7"}
+}
 
-# 1. 데이터 설정
+# 2. 식단 데이터 (예시: 3/17 화요일 데이터)
 menu_data = {
-    "2026-03-17(화)": {
-        "조식": ["연포탕", "매운두부찜"], "간편식": ["샌드위치", "요거트"],
-        "중식": ["버섯불고기", "우엉채레몬튀김", "수수기장밥", "얼큰어묵탕", "수정과"],
-        "석식": ["멘치카츠", "가쓰오장국"], "야식": ["소고기미역죽"]
-    }
-}
-color_map = {
-    "조식": ("#E95444", "#FFF5F4"), "간편식": ("#F1A33B", "#FFF9F0"),
-    "중식": ("#8BC34A", "#F9FBF2"), "석식": ("#4A90E2", "#F0F7FF"), "야식": ("#673AB7", "#F7F2FF")
+    "조식": ["제철미나리쭈꾸미연포탕", "매운두부찜", "흰쌀밥", "모둠장아찌", "누룽지"],
+    "간편식": ["고로케양배추샌드위치", "삶은계란", "플레인요거트"],
+    "중식": ["버섯불고기", "우엉채레몬튀김", "수수기장밥", "얼큰어묵탕", "수정과"],
+    "석식": ["양배추멘치카츠", "가쓰오장국", "시저드레싱샐러드", "열무김치"],
+    "야식": ["소고기미역죽", "돈육장조림", "깍두기", "블루베리요플레"]
 }
 
-if 'selected_meal' not in st.session_state:
-    st.session_state.selected_meal = "중식"
+# 3. 세션 상태 초기화 (메뉴 선택 유지의 핵심)
+if 'current_meal' not in st.session_state:
+    st.session_state.current_meal = "중식"
 
-# 2. CSS: 투명 버튼을 인덱스 위치에 강제로 박아넣기
-st.markdown("""
-    <style>
-    /* 1. 카드가 들어갈 컨테이너 설정 */
-    .card-wrapper {
-        position: relative;
-        width: 100%;
-        height: 400px;
-    }
+# 4. CSS: 인덱스 고정 및 테마 적용
+sel_meal = st.session_state.current_meal
+bold_c = color_theme[sel_meal]["idx"]
+soft_bg = color_theme[sel_meal]["bg"]
+
+st.markdown(f"""
+<style>
+    /* 메인 카드 스타일 */
+    .main-card {{
+        background-color: {soft_bg};
+        border: 2px solid {bold_c};
+        border-radius: 15px 0 0 15px;
+        padding: 30px 15px;
+        margin-right: 50px; /* 인덱스 버튼 공간 */
+        min-height: 350px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }}
     
-    /* 2. 실제 Streamlit 버튼을 인덱스 위치로 이동 및 투명화 */
-    div[data-testid="stHorizontalBlock"] {
-        position: absolute !important;
-        top: 45px !important; /* 날짜 선택창 아래 위치로 조정 */
-        right: 0 !important;
-        width: 45px !important; /* 인덱스 너비만큼 */
-        height: 380px !important;
-        z-index: 999 !important; /* 무조건 맨 위로 */
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 0 !important;
-    }
-
-    div[data-testid="stColumn"] {
-        flex: 1 !important;
-        width: 100% !important;
-    }
-
-    /* 3. 버튼 디자인 제거 (완전 투명 클릭 영역) */
-    .stButton > button {
-        width: 45px !important;
-        height: 76px !important; /* 380px / 5개 */
-        background: transparent !important;
-        border: none !important;
-        color: transparent !important;
-        box-shadow: none !important;
-        cursor: pointer !important;
-    }
-    
-    .stButton > button:hover {
-        background: rgba(255,255,255,0.1) !important;
-    }
-    </style>
+    /* 우측 고정 인덱스 컨테이너 */
+    .fixed-nav {{
+        position: fixed;
+        right: 10px;
+        top: 55%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        z-index: 1000;
+    }}
+</style>
 """, unsafe_allow_html=True)
 
-# 3. 렌더링 함수
-def render_card(selected_meal, date):
-    bold_c, soft_c = color_map[selected_meal]
-    menu = menu_data[date].get(selected_meal, ["정보 없음"])
-    
-    tabs_html = ""
-    for label in ["조식", "간편식", "중식", "석식", "야식"]:
-        b_color, _ = color_map[label]
-        opacity = "1.0" if label == selected_meal else "0.4"
-        tabs_html += f'<div style="background-color:{b_color}; flex:1; display:flex; align-items:center; justify-content:center; writing-mode:vertical-rl; text-orientation:upright; color:white; font-weight:bold; font-size:12px; opacity:{opacity}; border-radius:0 10px 10px 0; border-bottom:1px solid rgba(255,255,255,0.2);">{label}</div>'
+# 5. UI 렌더링
+st.title("🍴 오늘의 식사")
+st.selectbox("날짜 선택", ["2026-03-17(화)"], label_visibility="collapsed")
 
-    return f"""
-    <div class="card-wrapper" style="display: flex; width: 100%; height: 380px;">
-        <div style="flex: 1; background-color: {soft_c}; border: 3.2px solid {bold_c}; border-radius: 15px 0 0 15px; padding: 25px; text-align: center; display: flex; flex-direction: column; justify-content: center;">
-            <h2 style="color: {bold_c}; margin-bottom: 20px;">{selected_meal}</h2>
-            <p style="font-size: 22px; font-weight: bold; color: #333;">{menu[0]}</p>
-            <p style="font-size: 16px; color: #666; line-height: 1.8;">{' / '.join(menu[1:])}</p>
+# 카드와 버튼 레이아웃
+col_content, col_nav = st.columns([8.5, 1.5])
+
+with col_content:
+    menu = menu_data.get(sel_meal, ["정보 없음"])
+    st.markdown(f"""
+        <div class="main-card">
+            <h2 style="color: {bold_c}; margin-bottom: 20px;">{sel_meal}</h2>
+            <p style="font-size: 22px; font-weight: bold; color: #333;">🍲 {menu[0]}</p>
+            <p style="font-size: 16px; color: #666; margin-top: 15px; line-height: 1.6;">
+                {' / '.join(menu[1:])}
+            </p>
         </div>
-        <div style="display: flex; flex-direction: column; width: 45px;">
-            {tabs_html}
-        </div>
-    </div>
-    """
+    """, unsafe_allow_html=True)
 
-# 4. 앱 구성
-st.markdown("### 🍴 오늘의 식사")
-selected_date = st.selectbox("날짜", list(menu_data.keys()), label_visibility="collapsed")
-
-# 카드 표시
-st.markdown(render_card(st.session_state.selected_meal, selected_date), unsafe_allow_html=True)
-
-# 카드 바로 아래에 정의하지만, CSS가 인덱스 위치로 끌어올림
-cols = st.columns(1) # 세로로 쌓기 위해 하나만 사용하거나 CSS로 제어
-with st.container():
-    c1, c2, c3, c4, c5 = st.columns(5) # 실제 클릭은 여기서 발생
-    if c1.button("1", key="b1"): st.session_state.selected_meal="조식"; st.rerun()
-    if c2.button("2", key="b2"): st.session_state.selected_meal="간편식"; st.rerun()
-    if c3.button("3", key="b3"): st.session_state.selected_meal="중식"; st.rerun()
-    if c4.button("4", key="b4"): st.session_state.selected_meal="석식"; st.rerun()
-    if c5.button("5", key="b5"): st.session_state.selected_meal="야식"; st.rerun()
+# 6. 고정 인덱스 버튼 (선택 로직 보정)
+with col_nav:
+    st.markdown('<div class="fixed-nav">', unsafe_allow_html=True)
+    for meal in ["조식", "간편식", "중식", "석식", "야식"]:
+        # 버튼 스타일 동적 생성
+        m_color = color_theme[meal]["idx"]
+        is_selected = (meal == sel_meal)
+        
+        st.markdown(f"""
+            <style>
+            button[key="btn_{meal}"] {{
+                background-color: {m_color} !important;
+                opacity: {1.0 if is_selected else 0.5};
+                color: white !important;
+                writing-mode: vertical-rl;
+                text-orientation: upright;
+                height: 80px !important;
+                width: 45px !important;
+                border-radius: 0 10px 10px 0 !important;
+                border: none !important;
+                font-weight: bold !important;
+                box-shadow: {"2px 2px 8px rgba(0,0,0,0.2)" if is_selected else "none"};
+            }}
+            </style>
+        """, unsafe_allow_html=True)
+        
+        if st.button(meal, key=f"btn_{meal}"):
+            st.session_state.current_meal = meal
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
