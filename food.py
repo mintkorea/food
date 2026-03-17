@@ -1,98 +1,121 @@
 import streamlit as st
-import pandas as pd
 from datetime import datetime
 
-# --- 1. 데이터 세팅 ---
-def get_menu_data():
-    data = {
-        "date": ["2026-03-17(화)"] * 5,
-        "type": ["조식", "간편식", "중식", "석식", "야식"],
-        "main": ["제철미나리쭈꾸미연포탕", "고로케양배추샌드위치", "버섯불고기", "양배추멘치카츠", "소고기미역죽"],
-        "sub": ["매운두부찜, 흰쌀밥, 모둠장아찌", "삶은계란, 플레인요거트", "우엉채레몬튀김, 수수기장밥", "가쓰오장국, 시저드레싱샐러드", "돈육장조림, 깍두기"]
-    }
-    return pd.DataFrame(data)
+# 1. 일주일 전체 데이터 (업로드하신 이미지를 기반으로 보강)
+menu_data = {
+    "2026-03-16(월)": {
+        "조식": ["두유스프", "단호박에그마요샌드", "바게트/잡곡식빵", "맛살마요범벅"],
+        "간편식": ["운영 없음"],
+        "중식": ["차돌해물짬뽕밥", "김말이튀김", "흑미밥", "그린샐러드", "매실주스"],
+        "석식": ["어항가지돈육덮밥", "사골파국", "감자채햄볶음", "망고드레싱샐러드"],
+        "야식": ["날치알볶음밥", "후랑크소시지", "참깨드레싱샐러드", "요구르트"]
+    },
+    "2026-03-17(화)": {
+        "조식": ["제철미나리쭈꾸미연포탕", "매운두부찜", "모둠장아찌", "누룽지"],
+        "간편식": ["고로케양배추샌드위치", "삶은계란", "플레인요거트"],
+        "중식": ["버섯불고기", "우엉채레몬튀김", "수수기장밥", "얼큰어묵탕", "수정과"],
+        "석식": ["양배추멘치카츠", "가쓰오장국", "시저드레싱샐러드", "열무김치"],
+        "야식": ["소고기미역죽", "돈육장조림", "블루베리요플레"]
+    },
+    # 나머지 요일(수~일)도 동일한 구조로 추가 가능
+}
 
-# --- 2. 초기 세팅 ---
-st.set_page_config(page_title="Index Menu", layout="centered")
-
+# 2. 초기 세팅
 if 'selected_meal' not in st.session_state:
     st.session_state.selected_meal = "중식"
 
-# --- 3. 디자인 CSS (타이틀 크기 조절 및 인덱스 최적화) ---
-st.markdown("""
+# 식사별 선명한 인덱스 컬러 정의
+colors = {
+    "조식": {"bold": "#E95444", "soft": "#FDECEA"}, # 빨강
+    "간편식": {"bold": "#F1A33B", "soft": "#FFF4E5"}, # 주황
+    "중식": {"bold": "#8BC34A", "soft": "#F1F8E9"}, # 초록
+    "석식": ["#4A90E2", "#EBF3FB"], # 파랑
+    "야식": ["#673AB7", "#F3E5F5"] # 보라
+}
+# 딕셔너리 접근 편의를 위해 통일
+color_map = {
+    "조식": ("#E95444", "#FDECEA"),
+    "간편식": ("#F1A33B", "#FFF4E5"),
+    "중식": ("#8BC34A", "#F1F8E9"),
+    "석식": ("#4A90E2", "#EBF3FB"),
+    "야식": ("#673AB7", "#F3E5F5")
+}
+
+# 3. CSS 적용 (인덱스 고정 및 카드 색상 반영)
+bold_c, soft_c = color_map[st.session_state.selected_meal]
+
+st.markdown(f"""
     <style>
-    /* 타이틀 크기 강제 축소 */
-    .app-title {
-        font-size: 24px !important;
-        font-weight: 800;
-        margin-bottom: 10px;
-        color: #333;
-    }
+    .stApp {{ background-color: #FFFFFF; }}
+    .block-container {{ padding: 1rem; }}
     
-    /* 인덱스 버튼 세로 배치 및 크기 조절 */
-    .stButton > button {
-        width: 100%;
-        height: 65px;
+    /* 인덱스 탭 스타일 */
+    .stButton > button {{
+        height: 80px;
+        width: 45px;
         writing-mode: vertical-rl;
         text-orientation: upright;
-        border-radius: 0px 8px 8px 0px;
-        margin-bottom: 4px;
         border: none;
         color: white !important;
-        font-size: 14px;
+        border-radius: 0px 10px 10px 0px;
+        margin-bottom: 4px;
         font-weight: bold;
-        padding: 0px;
-    }
+        transition: 0.3s;
+    }}
     
-    /* 식사별 색상 */
-    div.row-widget.stButton:nth-of-type(1) > button { background-color: #FF9F43; } 
-    div.row-widget.stButton:nth-of-type(2) > button { background-color: #FEB236; color: black !important; } 
-    div.row-widget.stButton:nth-of-type(3) > button { background-color: #28C76F; } 
-    div.row-widget.stButton:nth-of-type(4) > button { background-color: #5C5EDC; } 
-    div.row-widget.stButton:nth-of-type(5) > button { background-color: #A06EE1; }
+    /* 선택된 탭은 약간 더 튀어나오게 */
+    .selected-tab {{
+        transform: translateX(5px);
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+    }}
 
-    .menu-card {
-        background: white;
-        padding: 25px 15px;
-        border-radius: 15px 0px 0px 15px;
-        min-height: 350px;
+    /* 메인 카드 스타일: 부드러운 배경색 적용 */
+    .main-card {{
+        background-color: {soft_c};
+        height: 450px;
+        border-radius: 20px 0px 0px 20px;
+        border: 2px solid {bold_c};
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
         text-align: center;
-        box-shadow: -3px 3px 10px rgba(0,0,0,0.05);
-        border-right: 3px solid #eee;
-    }
+        box-shadow: -5px 5px 15px rgba(0,0,0,0.05);
+    }}
     </style>
 """, unsafe_allow_html=True)
 
-# --- 4. 메인 UI ---
-# 기존 st.title 대신 마크다운으로 작게 표시
-st.markdown('<p class="app-title">📂 주간 식단 가이드</p>', unsafe_allow_html=True)
+# 4. 화면 구성
+st.title("🗂️ 주간 식단 가이드")
 
-df = get_menu_data()
-selected_date = st.selectbox("날짜", df['date'].unique(), label_visibility="collapsed")
+selected_date = st.selectbox("날짜 선택", list(menu_data.keys()), index=1, label_visibility="collapsed")
 
-# 에러 수정 포인트: gap="none"을 제거하거나 "small"로 변경
-col_card, col_index = st.columns([8.2, 1.8], gap="small")
-
-with col_index:
-    if st.button("조식"): st.session_state.selected_meal = "조식"
-    if st.button("간편"): st.session_state.selected_meal = "간편식"
-    if st.button("중식"): st.session_state.selected_meal = "중식"
-    if st.button("석식"): st.session_state.selected_meal = "석식"
-    if st.button("야식"): st.session_state.selected_meal = "야식"
+col_card, col_tab = st.columns([8.5, 1.5])
 
 with col_card:
-    row = df[(df['date'] == selected_date) & (df['type'] == st.session_state.selected_meal)]
-    if not row.empty:
+    menu = menu_data[selected_date].get(st.session_state.selected_meal, ["정보 없음"])
+    st.markdown(f"""
+        <div class="main-card">
+            <h2 style="color: {bold_c};">{st.session_state.selected_meal}</h2>
+            <div style="height: 1px; background-color: {bold_c}; opacity: 0.3; margin: 20px 0;"></div>
+            <p style="font-size: 24px; font-weight: bold; color: #333;">🍲 {menu[0]}</p>
+            <p style="font-size: 17px; color: #555; line-height: 1.8;">{' / '.join(menu[1:])}</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col_tab:
+    for label in ["조식", "간편식", "중식", "석식", "야식"]:
+        b_color, _ = color_map[label]
+        # 각 버튼의 색상을 개별 지정하기 위해 markdown과 button 조합
+        if st.button(label, key=f"btn_{label}"):
+            st.session_state.selected_meal = label
+            st.rerun()
+        
+        # 버튼 색상 강제 주입 (Streamlit 기본 버튼 색상 오버라이드)
         st.markdown(f"""
-            <div class="menu-card">
-                <p style="color: #999; font-size: 12px; margin-bottom:5px;">{selected_date}</p>
-                <h3 style="margin: 0; color: #444;">{st.session_state.selected_meal}</h3>
-                <hr style="margin: 15px 0; border: 0.5px solid #eee;">
-                <div style="margin: 20px 0;">
-                    <span style="font-size: 22px; font-weight: bold; color: #d32f2f;">🍲 {row['main'].values[0]}</span>
-                </div>
-                <p style="color: #666; font-size: 16px; line-height: 1.6;">
-                    {row['sub'].values[0].replace(',', '<br>')}
-                </p>
-            </div>
+            <style>
+            div[data-testid="stVerticalBlock"] > div:nth-child({["조식", "간편식", "중식", "석식", "야식"].index(label)+1}) button {{
+                background-color: {b_color} !important;
+            }}
+            </style>
         """, unsafe_allow_html=True)
