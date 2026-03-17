@@ -44,7 +44,7 @@ CSV_URL = "https://docs.google.com/spreadsheets/d/1l07s4rubmeB5ld8oJayYrstL34UPK
 st.markdown("""
 <div style="text-align:center; padding: 15px 0 5px 0;">
     <span style="
-        font-size: 30px !important; 
+        font-size: 35px !important; 
         font-weight: 800; 
         color: #1E3A5F; 
         letter-spacing: -0.5px;
