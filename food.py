@@ -1,6 +1,6 @@
 import streamlit as st
 
-# 1. 색상 및 식단 데이터
+# 1. 테마 및 데이터 설정
 color_theme = {
     "조식": {"idx": "#E95444", "bg": "#F9EBEA"},
     "간편식": {"idx": "#F1A33B", "bg": "#FEF5E7"},
@@ -17,7 +17,7 @@ menu_data = {
     "야식": ["소고기미역죽", "돈육장조림", "깍두기", "블루베리요플레"]
 }
 
-# 2. 세션 상태 관리
+# 2. 세션 상태 및 콜백
 if 'active_meal' not in st.session_state:
     st.session_state.active_meal = "중식"
 
@@ -28,72 +28,78 @@ current_sel = st.session_state.active_meal
 bold_c = color_theme[current_sel]["idx"]
 soft_bg = color_theme[current_sel]["bg"]
 
-# 3. CSS: 모바일에서도 절대 밀리지 않는 우측 고정 (핵심 수정)
+# 3. CSS: 모바일/데스크탑 공용 강제 고정
 st.markdown(f"""
 <style>
-    /* 메인 카드 영역: 인덱스가 들어올 자리를 확보(margin-right) */
+    /* 메인 앱 컨테이너 마진 조정 */
+    .main .block-container {{
+        padding-right: 60px !important;
+    }}
+
+    /* 메인 카드 디자인 */
     .main-card {{
         background-color: {soft_bg} !important;
-        border: 2.5px solid {bold_c} !important;
-        border-radius: 15px 0 0 15px !important;
-        padding: 30px 15px !important;
-        margin-right: 48px !important; 
-        min-height: 380px !important;
+        border: 2px solid {bold_c} !important;
+        border-radius: 15px !important;
+        padding: 25px 15px !important;
         text-align: center;
+        min-height: 350px;
     }}
-    
-    /* 인덱스 컨테이너: 화면 우측 끝에 강제 고정 */
-    .stButton {{
+
+    /* 인덱스 버튼 컨테이너 강제 고정 */
+    div[data-testid="stVerticalBlock"] > div:has(button[key^="btn_"]) {{
         position: fixed !important;
-        right: 0px !important;
-        z-index: 9999 !important;
+        right: 5px !important;
+        top: 20% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 2px !important;
+        z-index: 999999 !important;
+        width: 50px !important;
     }}
-    
-    /* 각 버튼의 높이 위치(top)를 개별 지정하여 겹치지 않게 함 */
-    #btn_조식 {{ top: 150px !important; }}
-    #btn_간편식 {{ top: 232px !important; }}
-    #btn_중식 {{ top: 314px !important; }}
-    #btn_석식 {{ top: 396px !important; }}
-    #btn_야식 {{ top: 478px !important; }}
+
+    /* 버튼 공통 스타일 */
+    button[key^="btn_"] {{
+        writing-mode: vertical-rl !important;
+        text-orientation: upright !important;
+        height: 80px !important;
+        width: 45px !important;
+        min-width: 45px !important;
+        padding: 0 !important;
+        border: none !important;
+        color: white !important;
+        font-weight: bold !important;
+        border-radius: 5px 0 0 5px !important;
+        margin-bottom: 2px !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
-# 4. UI 렌더링
+# 4. 메인 UI
 st.title("🍴 오늘의 식사")
 
-# 메인 카드
-menu = menu_data.get(current_sel, ["정보 없음"])
 st.markdown(f"""
     <div class="main-card">
         <h2 style="color: {bold_c};">{current_sel}</h2>
-        <hr style="border: 0.5px solid {bold_c}; opacity: 0.2;">
-        <p style="font-size: 24px; font-weight: bold; color: #333; margin-top: 20px;">🍲 {menu[0]}</p>
-        <p style="font-size: 16px; color: #555; line-height: 1.8;">{' / '.join(menu[1:])}</p>
+        <p style="font-size: 22px; font-weight: bold; color: #333; margin-top:20px;">🍲 {menu_data[current_sel][0]}</p>
+        <p style="font-size: 15px; color: #666; line-height: 1.6;">{' / '.join(menu_data[current_sel][1:])}</p>
     </div>
 """, unsafe_allow_html=True)
 
-# 5. 인덱스 버튼 생성 (ID를 부여하여 위치 고정)
+# 5. 버튼 생성 (이 블록이 CSS에 의해 우측으로 끌어올려짐)
 for meal in ["조식", "간편식", "중식", "석식", "야식"]:
     m_color = color_theme[meal]["idx"]
     is_active = (meal == current_sel)
     
+    # 버튼별 색상 및 투명도 개별 적용
     st.markdown(f"""
         <style>
-        div[data-testid="stButton"] > button:has(div:contains("{meal}")) {{
+        button[key="btn_{meal}"] {{
             background-color: {m_color} !important;
             opacity: {1.0 if is_active else 0.4} !important;
-            color: white !important;
-            writing-mode: vertical-rl !important;
-            text-orientation: upright !important;
-            height: 80px !important;
-            width: 48px !important;
-            border-radius: 10px 0 0 10px !important;
-            border: none !important;
-            padding: 0 !important;
-            font-weight: bold !important;
+            box-shadow: {"-2px 2px 5px rgba(0,0,0,0.2)" if is_active else "none"} !important;
         }}
         </style>
     """, unsafe_allow_html=True)
     
-    # 각 버튼에 고유 ID를 부여할 수 없으므로 스타일 시트에서 제어하기 쉽게 구성
     st.button(meal, key=f"btn_{meal}", on_click=update_meal, args=(meal,))
