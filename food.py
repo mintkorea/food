@@ -44,13 +44,13 @@ CSV_URL = "https://docs.google.com/spreadsheets/d/1l07s4rubmeB5ld8oJayYrstL34UPK
 st.markdown("""
 <div style="text-align:center; padding: 15px 0 5px 0;">
     <span style="
-        font-size: 20px !important; 
+        font-size: 25px !important; 
         font-weight: 800; 
         color: #1E3A5F; 
         letter-spacing: -0.5px;
         white-space: nowrap;
     ">
-        🍽️ 성의교정 주간 식단 가이드
+        🍽️ 성의교정 주간 식단
     </span>
 </div>
 """, unsafe_allow_html=True)
