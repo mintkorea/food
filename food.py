@@ -1,74 +1,71 @@
 import streamlit as st
 
-# 1. 초기 설정
+# 1. 상태 관리 및 테마
 color_theme = {
     "조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"
 }
 
-if 'active_meal' not in st.session_state:
-    st.session_state.active_meal = "중식"
+# 쿼리 파라미터를 통해 선택된 메뉴 파악 (새로고침 대응)
+params = st.query_params
+current = params.get("meal", "중식")
 
-current = st.session_state.active_meal
-
-# 2. 레이아웃 강제 고정 CSS (가로 좁아짐 방지)
+# 2. CSS: 모바일에서 절대 벌어지지 않는 고정 탭 디자인
 st.markdown(f"""
 <style>
-    /* 메인 컨테이너 너비 제한 (폰 화면 최적화) */
-    .main .block-container {{ max-width: 450px !important; padding: 15px 5px !important; }}
-
-    /* [핵심] 버튼을 담는 가로 박스 설정 */
-    [data-testid="stHorizontalBlock"] {{
-        display: flex !important;
-        flex-direction: row !important; /* 무조건 가로로 배치 */
-        flex-wrap: nowrap !important; /* 아래로 줄바꿈 금지 */
-        justify-content: space-between !important;
-        gap: 4px !important;
+    .main .block-container {{ max-width: 500px !important; padding: 10px !important; }}
+    
+    /* 탭 컨테이너: 가로로 꽉 차게 고정 */
+    .tab-container {{
+        display: flex;
+        width: 100%;
+        gap: 2px;
+        margin-top: 10px;
     }}
-
-    /* 각 컬럼(버튼)이 전체의 1/5씩 차지하도록 강제 */
-    [data-testid="column"] {{
-        flex: 1 1 0% !important;
-        min-width: 0 !important; /* 좁은 화면에서도 줄어들 수 있게 허용 */
+    
+    /* 개별 탭 버튼 스타일 */
+    .tab-item {{
+        flex: 1;
+        text-align: center;
+        padding: 12px 0;
+        font-size: 14px;
+        font-weight: bold;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: 0.2s;
     }}
-
-    /* 버튼 스타일 디자인 */
-    div.stButton > button {{
-        width: 100% !important;
-        height: 42px !important;
-        padding: 0 !important;
-        font-size: 12px !important;
-        font-weight: 800 !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        transition: transform 0.2s;
-    }}
-
-    /* 버튼 개별 색상 및 활성화 투명도 */
-    div[data-testid="column"]:nth-of-type(1) button {{ background-color: {color_theme["조식"]} !important; opacity: {1.0 if current == "조식" else 0.4}; }}
-    div[data-testid="column"]:nth-of-type(2) button {{ background-color: {color_theme["간편식"]} !important; opacity: {1.0 if current == "간편식" else 0.4}; }}
-    div[data-testid="column"]:nth-of-type(3) button {{ background-color: {color_theme["중식"]} !important; opacity: {1.0 if current == "중식" else 0.4}; }}
-    div[data-testid="column"]:nth-of-type(4) button {{ background-color: {color_theme["석식"]} !important; opacity: {1.0 if current == "석식" else 0.4}; }}
-    div[data-testid="column"]:nth-of-type(5) button {{ background-color: {color_theme["야식"]} !important; opacity: {1.0 if current == "야식" else 0.4}; }}
-
-    /* 중앙 식단 표시 카드 */
-    .info-box {{
-        border: 2px solid {color_theme[current]};
-        border-radius: 15px; padding: 25px 10px;
-        text-align: center; background-color: white;
-        margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    
+    .meal-card {{
+        border: 2px solid {color_theme.get(current, "#8BC34A")};
+        border-radius: 15px; padding: 30px 10px; text-align: center;
+        background-color: white; margin-bottom: 10px;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 화면 UI 출력
-st.markdown(f'<div class="info-box"><h1 style="color: {color_theme[current]}; margin:0;">{current}</h1></div>', unsafe_allow_html=True)
+# 3. 메인 표시 카드
+st.markdown(f"""
+    <div class="meal-card">
+        <h1 style="color: {color_theme.get(current, "#8BC34A")}; margin: 0;">{current}</h1>
+    </div>
+""", unsafe_allow_html=True)
 
-# 4. 버튼 생성 (이제 절대 깨지지 않습니다)
-cols = st.columns(5)
-meals = list(color_theme.keys())
+# 4. 탭 메뉴 생성 (HTML 앵커 태그 사용)
+# 클릭 시 URL 파라미터를 변경하여 즉시 화면을 갱신합니다.
+tabs_html = '<div class="tab-container">'
+for meal, color in color_theme.items():
+    # 선택된 메뉴는 선명하게, 나머지는 흐리게
+    opacity = "1.0" if meal == current else "0.3"
+    tabs_html += f'''
+        <a href="/?meal={meal}" target="_self" class="tab-item" 
+           style="background-color: {color}; opacity: {opacity};">
+            {meal}
+        </a>
+    '''
+tabs_html += '</div>'
 
-for i, m in enumerate(meals):
-    if cols[i].button(m, key=f"fixed_btn_{m}"):
-        st.session_state.active_meal = m
-        st.rerun()
+st.markdown(tabs_html, unsafe_allow_html=True)
+
+# 5. 선택된 메뉴에 따른 실제 데이터 출력 (예시)
+st.write(f"### 🍱 {current} 식단표")
+st.info(f"현재 {current} 메뉴 데이터를 불러오는 중입니다...")
