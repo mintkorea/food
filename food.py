@@ -1,94 +1,82 @@
 import streamlit as st
 
-# 1. 데이터 및 테마 설정
+# 1. 페이지 설정
+st.set_page_config(layout="centered")
+
+# 2. 테마 색상 및 데이터
 color_theme = {
     "조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"
 }
 
-if 'active_meal' not in st.session_state:
+# 3. 쿼리 파라미터 기반 상태 관리 (새로고침 속도 최적화)
+if "meal" in st.query_params:
+    st.session_state.active_meal = st.query_params["meal"]
+elif 'active_meal' not in st.session_state:
     st.session_state.active_meal = "중식"
 
 current = st.session_state.active_meal
 
-# 2. CSS: 모바일 호환성 강화 및 개별 색상 강제 주입
-# 각 버튼의 배경색을 '순서'가 아닌 '상태'와 '구조'에 맞춰 재정의합니다.
-color_styles = ""
-for i, (meal, color) in enumerate(color_theme.items(), 1):
-    is_active = (meal == current)
-    color_styles += f"""
-        /* 모든 기기에서 개별 라벨 색상 강제 적용 */
-        div[data-testid="stRadio"] div[role="radiogroup"] > label:nth-child({i}) {{
-            background-color: {color} !important;
-            opacity: {1.0 if is_active else 0.3} !important;
-            flex: 1 !important;
-            min-width: 0 !important; /* 모바일 좁은 화면 대응 */
-            padding: 10px 2px !important;
-            margin: 0 2px !important;
-            border-radius: 8px !important;
-            cursor: pointer !important;
-            border: {"2px solid #fff" if is_active else "none"} !important;
-            box-shadow: {"0px 2px 5px rgba(0,0,0,0.2)" if is_active else "none"} !important;
-        }}
-    """
-
+# 4. CSS: 모바일 폰트 크기 고정 및 레이아웃 강제
 st.markdown(f"""
 <style>
-    .main .block-container {{ max-width: 450px !important; padding: 10px !important; }}
-
-    /* 라디오 그룹 가로 고정 및 여백 제거 */
-    div[data-testid="stRadio"] > div[role="radiogroup"] {{
+    /* 여백 최적화 */
+    .main .block-container {{ max-width: 500px !important; padding: 10px !important; }}
+    
+    /* 가로 메뉴바: 모바일에서도 절대 꺾이지 않고 글자 크기 유지 */
+    .nav-bar {{
         display: flex !important;
         flex-direction: row !important;
-        justify-content: space-between !important;
         width: 100% !important;
-        gap: 0px !important;
-    }}
-
-    /* 텍스트 스타일 및 라디오 원형 숨기기 */
-    div[data-testid="stRadio"] label p {{
-        color: white !important;
-        font-size: 13px !important;
-        font-weight: bold !important;
-        text-align: center !important;
-        width: 100% !important;
+        gap: 6px;
+        margin: 15px 0;
     }}
     
-    div[data-testid="stRadio"] label div:first-child {{
-        display: none !important; /* 라디오 동그라미 제거 */
+    .nav-item {{
+        flex: 1;
+        text-align: center;
+        padding: 14px 0 !important; /* 터치하기 편한 높이 */
+        font-size: 14px !important; /* 글자 크기 강제 고정 */
+        font-weight: 800 !important;
+        text-decoration: none !important;
+        border-radius: 12px;
+        color: white !important;
+        display: block !important;
+        line-height: 1 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }}
 
-    /* 위젯 제목 제거 */
-    div[data-testid="stRadio"] > label {{ display: none !important; }}
-
-    {color_styles}
-
     .meal-card {{
-        border: 2px solid {color_theme[current]};
-        border-radius: 20px; padding: 35px 15px; text-align: center;
-        background-color: white; margin-bottom: 20px;
+        border: 2px solid {color_theme.get(current, "#8BC34A")};
+        border-radius: 20px; padding: 40px 20px; text-align: center;
+        background-color: #ffffff;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# 3. UI 구성
+# 5. UI 메인 섹션
 st.title("🍴 오늘의 식단")
 
 st.markdown(f"""
     <div class="meal-card">
-        <h2 style="color: {color_theme[current]}; margin-bottom: 10px;">{current}</h2>
-        <p style="font-size: 18px; font-weight: 500; color: #444;">🍱 맛있는 식사 시간이 되세요!</p>
+        <h2 style="color: {color_theme.get(current, "#8BC34A")}; margin: 0;">{current}</h2>
+        <div style="width: 40px; height: 3px; background-color: {color_theme.get(current, "#8BC34A")}; margin: 20px auto;"></div>
+        <p style="font-size: 18px; font-weight: bold; color: #333;">🍱 식단을 선택해주세요</p>
     </div>
 """, unsafe_allow_html=True)
 
-# 4. 가로 탭 (Radio 위젯 개조)
-selected = st.radio(
-    "meal_selector",
-    options=list(color_theme.keys()),
-    index=list(color_theme.keys()).index(current),
-    horizontal=True,
-    label_visibility="collapsed"
-)
+# 6. 가로 메뉴바 (순수 HTML <a> 태그 방식)
+# Streamlit 위젯을 거치지 않으므로 텍스트가 임의로 작아지거나 숨겨지지 않습니다.
+nav_html = '<div class="nav-bar">'
+for meal, color in color_theme.items():
+    # 선택된 메뉴는 투명도 1.0, 나머지는 0.4
+    opacity = "1.0" if meal == current else "0.4"
+    # 클릭 시 URL 파라미터를 변경하여 현재 페이지로 리다이렉트
+    nav_html += f"""
+        <a href="/?meal={meal}" target="_self" class="nav-item" 
+           style="background-color: {color}; opacity: {opacity};">
+            {meal}
+        </a>
+    """
+nav_html += '</div>'
 
-if selected != st.session_state.active_meal:
-    st.session_state.active_meal = selected
-    st.rerun()
+st.markdown(nav_html, unsafe_allow_html=True)
