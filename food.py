@@ -1,99 +1,114 @@
 import streamlit as st
 
-# 1. 색상 테마 정의
+# 1. 색상 테마
 color_theme = {
     "조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"
 }
 
-# 2. CSS: 모바일 전용 레이아웃 및 폰트 최적화
+# 2. CSS: 모바일에서 절대 줄바꿈 금지 및 클릭 최적화
 st.markdown(f"""
 <style>
-    /* 전체 컨테이너 폭 고정 (PC에서도 모바일처럼 보이게) */
+    /* 메인 컨테이너 폭 고정 */
     .main .block-container {{ 
-        max-width: 450px !important; 
+        max-width: 500px !important; 
         padding: 10px !important; 
     }}
 
-    /* 메인 카드: 하단 모서리 직각 (탭과 결합용) */
+    /* 메뉴 카드 디자인 */
     .menu-card {{
         border: 3px solid var(--card-color);
         border-radius: 15px 15px 0 0;
-        padding: 40px 15px;
+        padding: 45px 15px;
         text-align: center;
         background-color: white;
-        margin-bottom: 0px;
     }}
 
-    /* 하단 인덱스 탭 그룹 */
-    .index-tabs-bottom {{
+    /* 인덱스 탭 디자인 (카드 아래 밀착) */
+    .index-tabs-wrap {{
         display: flex;
         width: 100%;
-        gap: 2px; /* 버튼 사이 아주 미세한 간격 */
+        background-color: #eee;
+        border-radius: 0 0 15px 15px;
+        overflow: hidden;
     }}
 
-    /* 각 인덱스 탭 스타일: 폰트 크기 축소 */
-    .tab-item-bottom {{
+    .tab-unit {{
         flex: 1;
         text-align: center;
         padding: 12px 0;
-        border-radius: 0 0 12px 12px; /* 아래쪽만 둥글게 */
-        font-size: 12px !important; /* 모바일 대응 폰트 축소 */
+        font-size: 12px;
         font-weight: bold;
         color: white;
-        transition: all 0.2s;
+        border-right: 1px solid rgba(255,255,255,0.1);
     }}
 
-    /* 라디오 버튼 영역: 완전 숨김 처리 (클릭 감지용으로만 작동) */
+    /* [핵심] 라디오 버튼 한 줄 강제 고정 및 텍스트 숨김 */
     div[data-testid="stRadio"] {{
-        position: absolute;
-        top: -1000px;
+        margin-top: 5px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 5px 0 !important;
+    }}
+    
+    div[data-testid="stRadio"] > div {{
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important; /* 절대 줄바꿈 금지 */
+        justify-content: space-around !important;
+    }}
+
+    /* 각 라디오 버튼의 클릭 영역을 20%로 균등 배분 */
+    div[data-testid="stRadio"] label {{
+        flex: 1 !important;
+        min-width: unset !important;
+        justify-content: center !important;
+        margin: 0 !important;
+        padding: 10px 0 !important;
+    }}
+
+    /* 라디오 버튼 옆의 텍스트를 숨겨서 동그라미만 보이게 */
+    div[data-testid="stRadio"] label p {{
+        display: none !important;
+    }}
+
+    /* 라디오 버튼 동그라미 크기 키우기 */
+    div[data-testid="stRadio"] label div:first-child {{
+        transform: scale(1.4);
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# 초기 선택 상태
+# 세션 상태
 if 'selected_meal' not in st.session_state:
     st.session_state.selected_meal = "중식"
 
-# 3. 상단 카드 UI
+# 3. 상단 메뉴 카드
 selected_color = color_theme[st.session_state.selected_meal]
 st.markdown(f"""
     <div class="menu-card" style="--card-color: {selected_color};">
-        <h1 style="color: {selected_color}; margin: 0; font-size: 28px;">{st.session_state.selected_meal}</h1>
-        <p style="color: #666; margin-top: 8px; font-size: 13px;">선택한 식단의 메뉴를 확인하세요</p>
+        <h1 style="color: {selected_color}; margin: 0; font-size: 30px;">{st.session_state.selected_meal}</h1>
+        <p style="color: #666; margin-top: 8px; font-size: 14px;">선택한 식단의 메뉴를 확인하세요</p>
     </div>
 """, unsafe_allow_html=True)
 
-# 4. 하단 결합형 인덱스 UI (메뉴 아래로 이동)
-tabs_html = '<div class="index-tabs-bottom">'
+# 4. 하단 인덱스 탭 (카드와 붙음)
+tabs_html = '<div class="index-tabs-wrap">'
 for meal, color in color_theme.items():
-    # 선택된 탭은 진하게, 나머지는 연하게
-    opacity = "1.0" if meal == st.session_state.selected_meal else "0.4"
-    # 선택된 탭은 약간 더 길게 내려오도록 효과
-    padding = "15px 0" if meal == st.session_state.selected_meal else "12px 0"
-    tabs_html += f'<div class="tab-item-bottom" style="background-color: {color}; opacity: {opacity}; padding: {padding};">{meal}</div>'
+    opacity = "1.0" if meal == st.session_state.selected_meal else "0.3"
+    tabs_html += f'<div class="tab-unit" style="background-color: {color}; opacity: {opacity};">{meal}</div>'
 tabs_html += '</div>'
 st.markdown(tabs_html, unsafe_allow_html=True)
 
-# 5. 실제 작동을 위한 버튼 (라디오 버튼 대신 클릭이 확실한 버튼 사용)
-st.write("") # 간격 조절
-cols = st.columns(5)
-for i, meal in enumerate(color_theme.keys()):
-    with cols[i]:
-        # 버튼 텍스트를 숨기거나 작게 하여 인덱스 탭 위치와 매칭
-        if st.button("●", key=f"btn_{meal}", help=f"{meal} 선택"):
-            st.session_state.selected_meal = meal
-            st.rerun()
+# 5. 선택용 라디오 버튼 (한 줄 고정)
+# label_visibility="collapsed"로 제목을 숨기고 horizontal=True로 가로 배치
+selected = st.radio(
+    "meal_selector",
+    options=list(color_theme.keys()),
+    index=list(color_theme.keys()).index(st.session_state.selected_meal),
+    horizontal=True,
+    label_visibility="collapsed"
+)
 
-# 버튼 스타일 미세 조정
-st.markdown("""
-    <style>
-    div.stButton > button {
-        width: 100%;
-        border: none !important;
-        background: transparent !important;
-        color: #ddd !important;
-        font-size: 10px !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
+if selected != st.session_state.selected_meal:
+    st.session_state.selected_meal = selected
+    st.rerun()
