@@ -70,3 +70,4 @@ for i, meal in enumerate(meals):
     if cols[i].button(meal, key=f"fixed_gap_btn_{meal}"):
         st.session_state.active_meal = meal
         st.rerun()
+
