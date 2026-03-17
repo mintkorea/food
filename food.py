@@ -1,104 +1,103 @@
 import streamlit as st
 
-# 1. 색상 및 데이터 설정
-menu_data = {
-    "조식": {"color": "#E95444", "light": "#FADEDC"},
-    "간편식": {"color": "#F1A33B", "light": "#FDF0D9"},
-    "중식": {"color": "#8BC34A", "light": "#E8F5E9"},
-    "석식": {"color": "#4A90E2", "light": "#E3F2FD"},
-    "야식": {"color": "#673AB7", "light": "#EDE7F6"}
+# 1. 테마 색상 설정
+menu_config = {
+    "조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"
 }
 
 if 'active_meal' not in st.session_state:
     st.session_state.active_meal = "중식"
 
 current = st.session_state.active_meal
-current_color = menu_data[current]["color"]
+current_color = menu_config[current]
 
-# 2. CSS: 이미지의 '아래쪽 안' 디자인 구현
+# 2. 핵심 CSS: 세로 정렬 방지 및 이미지 디자인 구현
 st.markdown(f"""
 <style>
-    .main .block-container {{ max-width: 450px !important; padding: 10px !important; }}
+    /* 전체 너비 최적화 */
+    .main .block-container {{ max-width: 500px !important; padding: 10px !important; }}
+
+    /* 라디오 그룹 전체를 가로로 강제 고정 */
+    div[data-testid="stRadio"] > div {{
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-around !important;
+        align-items: flex-end !important;
+        gap: 0px !important;
+        width: 100% !important;
+    }}
+
+    /* 각 항목(버튼 + 원형)을 감싸는 영역 */
+    div[data-testid="stRadio"] label {{
+        display: flex !important;
+        flex-direction: column !important; /* 위: 글자(메뉴바), 아래: 원형 */
+        align-items: center !important;
+        justify-content: center !important;
+        flex: 1 !important;
+        margin: 0 !important;
+        padding: 5px 0 !important;
+    }}
+
+    /* 윗부분: 메뉴바(텍스트) 스타일 */
+    div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {{
+        width: 100% !important;
+        text-align: center !important;
+        padding: 10px 0 !important;
+        border-radius: 8px 8px 0 0 !important;
+        font-weight: bold !important;
+        font-size: 14px !important;
+        background-color: #f0f2f6 !important; /* 기본 배경색 */
+        margin-bottom: 8px !important;
+    }}
+
+    /* 선택된 항목의 상단 메뉴바 색상 변경 (마우스 온 효과 대체) */
+    div[data-testid="stRadio"] label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p {{
+        background-color: {current_color} !important;
+        color: white !important;
+    }}
+
+    /* 아랫부분: 라디오 버튼 원형 크기 및 간격 조절 */
+    div[data-testid="stRadio"] label div:first-child {{
+        margin: 0 !important;
+    }}
     
-    /* 상단 식단 카드 */
-    .meal-card {{
+    /* 선택된 라디오 원형 색상 강조 */
+    div[data-testid="stRadio"] div[role="radiogroup"] input[checked] + div {{
+        background-color: {current_color} !important;
+        border-color: {current_color} !important;
+    }}
+
+    /* 상단 큰 카드 스타일 */
+    .display-card {{
         border: 2px solid {current_color};
         border-radius: 20px;
-        padding: 30px 10px;
+        padding: 25px;
         text-align: center;
         background-color: white;
         margin-bottom: 20px;
     }}
-    
-    /* 버튼 컨테이너 (5개 가로 정렬) */
-    .button-group {{
-        display: flex;
-        justify-content: space-between;
-        gap: 5px;
-    }}
-    
-    /* 개별 버튼 세트 (버튼 + 라디오 원형) */
-    .btn-item {{
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-    }}
-
-    /* 메뉴 버튼 스타일 */
-    .menu-btn {{
-        width: 100%;
-        padding: 12px 0;
-        border-radius: 10px;
-        font-size: 13px;
-        font-weight: bold;
-        color: white;
-        text-align: center;
-        text-decoration: none;
-    }}
-    
-    /* 라디오 버튼 모양 (원형 표시) */
-    .radio-dot {{
-        width: 16px;
-        height: 16px;
-        border: 2px solid #333;
-        border-radius: 50%;
-        background-color: white;
-    }}
-    
-    .radio-dot.active {{
-        background-color: {current_color}; /* 선택된 색상으로 채움 */
-        border-color: {current_color};
-    }}
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 상단 제목 및 메인 카드
-st.markdown('<h2 style="text-align:center; color:#333;">🍴 오늘의 식단</h2>', unsafe_allow_html=True)
+# 3. 상단 결과 표시
 st.markdown(f"""
-    <div class="meal-card">
+    <div class="display-card">
         <h1 style="color: {current_color}; margin: 0;">{current}</h1>
-        <p style="color: #666; margin-top: 10px;">원하시는 식단을 탭하세요</p>
+        <p style="color: #888; margin-top: 5px;">원하시는 식단을 아래에서 선택하세요</p>
     </div>
 """, unsafe_allow_html=True)
 
-# 4. 버튼 및 라디오 버튼 레이아웃
-cols = st.columns(5)
-meal_names = list(menu_data.keys())
+# 4. 통합 라디오 버튼 (상단 바 + 하단 점)
+# 레이블을 'collapsed'로 설정하여 불필요한 제목을 지웁니다.
+selected = st.radio(
+    "meal_selector",
+    options=list(menu_config.keys()),
+    index=list(menu_config.keys()).index(current),
+    horizontal=True,
+    label_visibility="collapsed"
+)
 
-for i, name in enumerate(meal_names):
-    with cols[i]:
-        # 버튼 출력
-        if st.button(name, key=f"btn_{name}"):
-            st.session_state.active_meal = name
-            st.rerun()
-        
-        # 버튼 아래 원형 표시 (CSS로 active 클래스 제어)
-        is_active = "active" if name == current else ""
-        st.markdown(f'<div class="btn-item"><div class="radio-dot {is_active}"></div></div>', unsafe_allow_html=True)
-
-# 5. 선택된 메뉴의 상세 식단 (예시)
-st.divider()
-st.subheader(f"🍱 {current} 메뉴")
-st.info(f"현재 {current}에 준비된 맛있는 식단을 확인하세요!")
+# 선택 값이 바뀌면 즉시 업데이트
+if selected != st.session_state.active_meal:
+    st.session_state.active_meal = selected
+    st.rerun()
