@@ -1,109 +1,37 @@
-import streamlit as st
-
-# 1. 색상 테마 정의
-color_theme = {
-    "조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"
+weekly_meal_data = {
+    "2026-03-09": {
+        "조식": {"menu": "고구마스프/콘치즈또띠아롤", "side": "모닝롤, 바게트&딸기잼, 버터, 비엔나구이, 오리엔탈샐러드, 씨리얼2종"},
+        "간편식": {"menu": "미운영", "side": ""},
+        "중식": {"menu": "제철봄동비빔밥", "side": "봄동겉절이+꽁보리밥, 계란후라이, 데리야끼떡갈비볶음, 미역국, 요구르트"},
+        "석식": {"menu": "부대찌개&라면사리", "side": "추가쌀밥, 견과류연근조림, 코울슬로, 깍두기, 펩시콜라라임"},
+        "야식": {"menu": "청양마요닭강정", "side": "흰쌀밥, 미소장국, 어묵채볶음, 푸실리케찹무침, 무피클"}
+    },
+    "2026-03-10": {
+        "조식": {"menu": "돈육김치찌개", "side": "흰쌀밥, 메추리알곤약조림, 바싹김구이, 누룽지, 원두커피"},
+        "간편식": {"menu": "베이컨감자모닝샌드", "side": "바나나 & 삶은계란"},
+        "중식": {"menu": "뚝배기대파육개장", "side": "생선까스튀김 & 와사비마요소스, 흑향미밥, 참나물유자겉절이, 복분자주스"},
+        "석식": {"menu": "제주고기국수", "side": "돈삼겹+중화면+고기육수, 추가쌀밥, 다대기, 손만두, 샐러리장아찌"},
+        "야식": {"menu": "소고기야채죽", "side": "새송이간장조림, 오징어젓갈무침, 복숭아요플레"}
+    },
+    "2026-03-11": {
+        "조식": {"menu": "황태설렁탕", "side": "흰쌀밥, 너비아니구이&파채, 양념깻잎지, 누룽지, 원두커피"},
+        "간편식": {"menu": "에그샌드위치 & 사과주스", "side": ""},
+        "중식": {"menu": "불고기호박오일파스타", "side": "쓰리라차닭살구이, 팽이장국, 오리엔탈샐러드, 수제비트무피클, 매실주스"},
+        "석식": {"menu": "시래기감자탕", "side": "흰쌀밥, 두부양념조림, 쌈채소무침, 깍두기, 요구르트"},
+        "야식": {"menu": "간짜장덮밥", "side": "완두콩밥, 짬뽕국, 인절미탕수육, 짜사이무침, 요구르트"}
+    },
+    "2026-03-12": {
+        "조식": {"menu": "곤드레영양밥 & 양념장", "side": "고등어무조림, 얼큰콩나물국, 오이지무침, 열무김치, 신라면투움바"},
+        "간편식": {"menu": "치킨스테이크샐러드", "side": ""},
+        "중식": {"menu": "고추장두루치기", "side": "청상추쌈, 쌈장, 혼합잡곡밥, 얼갈이된장국, 후르츠마카로니콘마요, 수정과"},
+        "석식": {"menu": "뚝배기불고기나베 & 당면사리", "side": "소떡소떡강정, 흰쌀밥, 마늘종장아찌무침, 깍두기"},
+        "야식": {"menu": "크래미에그샌드위치", "side": "초코우유"}
+    },
+    "2026-03-13": {
+        "조식": {"menu": "참치야채죽/크로와상샌드위치", "side": "잡곡식빵, 바게트&딸기잼, 오리엔탈샐러드, 씨리얼2종, 누룽지"},
+        "간편식": {"menu": "미운영", "side": ""},
+        "중식": {"menu": "소세지카레라이스", "side": "완두콩밥, 유부장국, 실곤약초무침, 구운버섯샐러드, 미숫가루"},
+        "석식": {"menu": "춘천식닭갈비", "side": "유채된장국, 흰쌀밥, 청포묵김무침, 와사비쌈무, 열무김치"},
+        "야식": {"menu": "우렁강된장덮밥", "side": "미역국, 부추야채전, 동그랑땡구이, 검은콩자반, 포도주스"}
+    }
 }
-
-# 2. CSS: 텍스트 강제 가로 정렬 및 모바일 최적화
-st.markdown(f"""
-<style>
-    /* 전체 컨테이너 너비 제한 (가시성 확보) */
-    .main .block-container {{ 
-        max-width: 500px !important; 
-        padding: 10px !important; 
-    }}
-
-    /* 메뉴 카드 디자인 */
-    .menu-card {{
-        border: 3px solid var(--card-color);
-        border-radius: 15px 15px 0 0;
-        padding: 40px 15px;
-        text-align: center;
-        background-color: white;
-    }}
-
-    /* 인덱스 탭 (카드 하단 부착) */
-    .index-tabs-wrap {{
-        display: flex;
-        width: 100%;
-        margin-bottom: 5px;
-    }}
-
-    .tab-unit {{
-        flex: 1;
-        text-align: center;
-        padding: 12px 0;
-        font-size: 11px !important; /* 모바일 대응 폰트 축소 */
-        font-weight: bold;
-        color: white;
-        border-radius: 0 0 5px 5px;
-    }}
-
-    /* [핵심] 라디오 버튼 가로 강제 정렬 */
-    div[data-testid="stRadio"] > div {{
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important; /* 절대 줄바꿈 금지 */
-        justify-content: space-between !important;
-        background-color: #f8f9fa;
-        padding: 8px 5px !important;
-        border-radius: 10px;
-    }}
-
-    /* 라디오 버튼 항목 너비 고정 */
-    div[data-testid="stRadio"] label {{
-        flex: 1 !important;
-        white-space: nowrap !important; /* 텍스트 줄바꿈 금지 */
-        justify-content: center !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }}
-
-    /* 텍스트 크기 조절 (중간 배치용) */
-    div[data-testid="stRadio"] label p {{
-        font-size: 11px !important;
-        font-weight: bold;
-        color: #555 !important;
-    }}
-
-    /* 라디오 버튼 원형 크기 조절 */
-    div[data-testid="stRadio"] label div:first-child {{
-        transform: scale(0.9);
-    }}
-</style>
-""", unsafe_allow_html=True)
-
-# 세션 상태 관리
-if 'selected_meal' not in st.session_state:
-    st.session_state.selected_meal = "중식"
-
-# 3. 상단 메뉴 카드 UI
-selected_color = color_theme[st.session_state.selected_meal]
-st.markdown(f"""
-    <div class="menu-card" style="--card-color: {selected_color};">
-        <h1 style="color: {selected_color}; margin: 0; font-size: 28px;">{st.session_state.selected_meal}</h1>
-        <p style="color: #666; margin-top: 8px; font-size: 13px;">선택한 식단의 메뉴를 확인하세요</p>
-    </div>
-""", unsafe_allow_html=True)
-
-# 4. 하단 인덱스 탭 UI
-tabs_html = '<div class="index-tabs-wrap">'
-for meal, color in color_theme.items():
-    opacity = "1.0" if meal == st.session_state.selected_meal else "0.3"
-    tabs_html += f'<div class="tab-unit" style="background-color: {color}; opacity: {opacity};">{meal}</div>'
-tabs_html += '</div>'
-st.markdown(tabs_html, unsafe_allow_html=True)
-
-# 5. [사용자 제안] 텍스트가 포함된 라디오 버튼 (간격 유지의 핵심)
-selected = st.radio(
-    "meal_selector",
-    options=list(color_theme.keys()),
-    index=list(color_theme.keys()).index(st.session_state.selected_meal),
-    horizontal=True,
-    label_visibility="collapsed"
-)
-
-if selected != st.session_state.selected_meal:
-    st.session_state.selected_meal = selected
-    st.rerun()
