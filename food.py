@@ -119,3 +119,4 @@ if selected != st.session_state.selected_meal:
     st.rerun()
 
 st.markdown(f'<div class="msg-box">현재 {st.session_state.selected_meal} 메뉴를 확인 중입니다.</div>', unsafe_allow_html=True)
+
