@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-import streamlit.components.v1 as components
 
 # 1. 기초 설정
 KST = ZoneInfo("Asia/Seoul")
@@ -26,18 +25,39 @@ CSV_URL = "https://docs.google.com/spreadsheets/d/1l07s4rubmeB5ld8oJayYrstL34UPK
 meal_data = load_meal_data(CSV_URL)
 color_theme = {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 
-# 3. CSS (상단 카드 및 레이아웃)
+# 3. CSS (카드와 버튼 밀착 및 디자인 최적화)
 st.markdown(f"""
 <style>
-    .block-container {{ padding: 1rem 0.5rem !important; max-width: 500px !important; }}
+    .block-container {{ padding: 1rem 0.5rem !important; max-width: 480px !important; }}
     header {{ visibility: hidden; }}
+    
+    /* 식단 카드: 하단 마진 제거하여 버튼과 밀착 */
     .menu-card {{ 
-        border: 1px solid #ddd; border-top: 15px solid {color_theme[st.session_state.selected_meal]};
-        border-radius: 20px; padding: 25px 15px; text-align: center; 
+        border: 1px solid #ddd; border-top: 12px solid {color_theme[st.session_state.selected_meal]};
+        border-radius: 15px 15px 0 0; padding: 25px 15px; text-align: center; 
         background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        margin-bottom: 20px;
+        margin-bottom: 0px;
     }}
-    /* 모바일에서 버튼이 수직으로 쌓이는 것을 방지하기 위해 기본 버튼 숨김 처리 고려 가능 */
+
+    /* 버튼 컨테이너: 카드와 붙이기 위해 여백 조정 */
+    div[data-testid="stHorizontalBlock"] {{
+        gap: 2px !important;
+        background: #f8f9fa;
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-top: none;
+        border-radius: 0 0 15px 15px;
+    }}
+
+    /* Streamlit 기본 버튼 개조 */
+    div[data-testid="stHorizontalBlock"] button {{
+        border: none !important;
+        border-radius: 8px !important;
+        height: 45px !important;
+        padding: 0 !important;
+        font-size: 13px !important;
+        font-weight: 800 !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -46,7 +66,7 @@ d = st.session_state.target_date
 w_list = ["월","화","수","목","금","토","일"]
 st.markdown(f'<div style="text-align:center; font-size:22px; font-weight:800; margin-bottom:15px;">📅 {d.strftime("%m월 %d일")} ({w_list[d.weekday()]})</div>', unsafe_allow_html=True)
 
-# 날짜 변경 (이 부분은 기존 버튼 유지)
+# 상단 날짜 이동
 c1, c2, c3 = st.columns(3)
 with c1: 
     if st.button("◀ 이전날", use_container_width=True): st.session_state.target_date -= timedelta(1); st.rerun()
@@ -55,79 +75,35 @@ with c2:
 with c3:
     if st.button("다음날 ▶", use_container_width=True): st.session_state.target_date += timedelta(1); st.rerun()
 
-# 식단 카드
+# 5. 식단 카드 (상단 부분)
 key = (d.strftime("%Y-%m-%d"), st.session_state.selected_meal)
 meal_info = meal_data.get(key, {"menu": "정보 없음", "side": "식단 정보가 없습니다."})
 
 st.markdown(f"""
     <div class="menu-card">
         <div style="color: {color_theme[st.session_state.selected_meal]}; font-size: 14px; font-weight: 800; margin-bottom: 5px;">{st.session_state.selected_meal}</div>
-        <div style="font-size: 24px; font-weight: 800; color: #111; margin-bottom: 12px;">{meal_info['menu']}</div>
+        <div style="font-size: 24px; font-weight: 800; color: #111; margin-bottom: 12px; word-break: keep-all;">{meal_info['menu']}</div>
         <div style="color: #555; font-size: 15px; line-height: 1.4;">{meal_info['side']}</div>
     </div>
 """, unsafe_allow_html=True)
 
-# 5. [강력 해결] HTML 컴포넌트를 이용한 가로 그리드 버튼
-# Streamlit의 컬럼 제약을 벗어나기 위해 직접 HTML 그리드를 작성합니다.
-button_html = f"""
-<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; font-family: sans-serif;">
-    {" ".join([f'''
-    <div onclick="window.parent.postMessage({{type: 'streamlit:set_component_value', value: '{m}'}}, '*')"
-         style="background: {color_theme[m] if st.session_state.selected_meal == m else '#f0f2f6'};
-                color: {'white' if st.session_state.selected_meal == m else '#666'};
-                border-radius: 10px; padding: 15px 0; text-align: center; 
-                font-weight: bold; font-size: 14px; cursor: pointer; border: 1px solid #ddd;">
-        {m}
-    </div>''' for m in color_theme.keys()])}
-</div>
-"""
+# 6. 식단 선택 버튼 (카드 바로 아래에 밀착된 5열 그리드)
+cols = st.columns(5)
+for i, (m_name, m_color) in enumerate(color_theme.items()):
+    with cols[i]:
+        is_sel = (st.session_state.selected_meal == m_name)
+        # 선택된 버튼은 고유 컬러 적용, 나머지는 연한 회색
+        if st.button(m_name, key=f"m_{i}", use_container_width=True, 
+                     type="primary" if is_sel else "secondary"):
+            st.session_state.selected_meal = m_name
+            st.rerun()
 
-# HTML 버튼의 클릭 이벤트를 Streamlit 상태와 연결
-res = components.html(f"""
-    <script>
-    function sendValue(val) {{
-        window.parent.postMessage({{
-            type: 'streamlit:set_component_value',
-            value: val
-        }}, '*');
-    }}
-    </script>
-    {button_html.replace("window.parent.postMessage", "sendValue")}
-""", height=70)
-
-# 만약 HTML 컴포넌트에서 값이 넘어오면 상태 업데이트 (테스트용으로 radio 대체 사용 권장)
-# 현재 환경에서 가장 확실한 방법은 아래의 CSS 주입형 radio입니다.
-
-st.markdown("""
+# 선택된 버튼 색상을 CSS로 강제 주입 (Streamlit 기본 primary 색상 변경)
+st.markdown(f"""
 <style>
-    /* Radio 컨테이너 가로 정렬 강제 */
-    div[data-testid="stRadio"] > div {
-        display: flex !important;
-        flex-direction: row !important;
-        justify-content: space-between !important;
-        width: 100% !important;
-        gap: 5px !important;
-    }
-    div[data-testid="stRadio"] label {
-        flex: 1 !important;
-        background-color: #f8f9fa !important;
-        border: 1px solid #eee !important;
-        border-radius: 10px !important;
-        padding: 10px 0 !important;
-        justify-content: center !important;
-    }
-    div[data-testid="stRadio"] label div:first-child { display: none !important; } /* 동그라미 제거 */
-    
-    /* 선택된 버튼 색상 - 위에서 정의한 컬러 테마와 맞춤 */
-    div[data-testid="stRadio"] label[data-selected="true"] { background-color: #1E3A5F !important; } 
-    div[data-testid="stRadio"] label[data-selected="true"] p { color: white !important; }
+    div[data-testid="stHorizontalBlock"] button[kind="primary"] {{
+        background-color: {color_theme[st.session_state.selected_meal]} !important;
+        color: white !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
-
-selected = st.radio("식사", options=list(color_theme.keys()), 
-                    index=list(color_theme.keys()).index(st.session_state.selected_meal),
-                    horizontal=True, label_visibility="collapsed")
-
-if selected != st.session_state.selected_meal:
-    st.session_state.selected_meal = selected
-    st.rerun()
