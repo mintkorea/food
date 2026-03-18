@@ -17,7 +17,7 @@ st.markdown(f"""
     /* 전체 화면 중앙 정렬 및 여백 최적화 */
     .block-container {{ padding: 1rem 0.5rem !important; max-width: 500px !important; }}
     
-    /* [핵심] 가로 5열 강제 고정 (비상연락망 그리드 방식) */
+    /* [핵심] 가로 5열 강제 고정 */
     div[data-testid="stHorizontalBlock"] {{
         display: flex !important;
         flex-direction: row !important; /* 무조건 가로 */
@@ -32,7 +32,7 @@ st.markdown(f"""
         min-width: 0px !important;      /* 최소 너비 제한 해제 */
     }}
 
-    /* 버튼 기본 스타일: 클릭 영역을 키우고 폰트 조절 */
+    /* 버튼 스타일: 클릭 영역 확보 및 폰트 조절 */
     button {{
         height: 50px !important;
         padding: 0px !important;
@@ -44,7 +44,7 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 상단 날짜 및 식단 카드 (생략 가능, 기존 로직 유지)
+# 3. 상단 날짜 및 식단 카드
 d = st.session_state.target_date
 st.markdown(f'<div style="text-align:center; font-size:22px; font-weight:800; margin-bottom:15px;">📅 {d.strftime("%m월 %d일")}</div>', unsafe_allow_html=True)
 
@@ -54,8 +54,8 @@ st.markdown(f"""
                 border-radius: 15px; padding: 25px 15px; text-align: center; background: white; 
                 box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px;">
         <div style="color: {color_theme[st.session_state.selected_meal]}; font-size: 14px; font-weight: 800;">{st.session_state.selected_meal}</div>
-        <div style="font-size: 24px; font-weight: 800; margin-top: 10px;">뼈있는닭볶음탕</div>
-        <div style="color: #666; font-size: 15px; margin-top: 10px;">데이터 연동 시 메뉴가 표시됩니다.</div>
+        <div style="font-size: 24px; font-weight: 800; margin-top: 10px;">오늘의 메뉴</div>
+        <div style="color: #666; font-size: 15px; margin-top: 10px;">데이터 연동 시 상세 메뉴가 표시됩니다.</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -65,11 +65,12 @@ meals = list(color_theme.keys())
 
 for i, m_name in enumerate(meals):
     with cols[i]:
+        # 버튼을 클릭하면 상태를 변경하고 화면을 새로고침합니다.
         if st.button(m_name, key=f"meal_btn_{m_name}", use_container_width=True):
             st.session_state.selected_meal = m_name
             st.rerun()
 
-# 5. 선택된 버튼 색상 강조 (비상연락망의 컬러 구분 방식)
+# 5. 선택된 버튼 색상 강조
 st.markdown(f"""
 <style>
     div[data-testid="column"]:nth-of-type({meals.index(st.session_state.selected_meal) + 1}) button {{
