@@ -1,82 +1,93 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
-# 1. 페이지 설정 및 상태 관리
+# 1. 초기 설정
 KST = ZoneInfo("Asia/Seoul")
 now = datetime.now(KST)
-if 'target_date' not in st.session_state: st.session_state.target_date = now.date()
 if 'selected_meal' not in st.session_state: st.session_state.selected_meal = "중식"
 
 color_theme = {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 
-# 2. [강력 해결] CSS를 통한 가로 그리드 강제 주입
+# 2. [완전 해결] HTML/CSS 기반 가로 5열 그리드 주입
+# 이 부분은 Streamlit의 반응형 기능을 완전히 차단하고 비상연락망처럼 격자를 고정합니다.
 st.markdown(f"""
 <style>
-    /* 전체 화면 중앙 정렬 및 여백 최적화 */
+    /* 전체 컨테이너 여백 최적화 */
     .block-container {{ padding: 1rem 0.5rem !important; max-width: 500px !important; }}
-    
-    /* [핵심] 가로 5열 강제 고정 */
-    div[data-testid="stHorizontalBlock"] {{
-        display: flex !important;
-        flex-direction: row !important; /* 무조건 가로 */
-        flex-wrap: nowrap !important;   /* 줄바꿈 절대 금지 */
-        gap: 4px !important;            /* 버튼 사이 간격 */
-    }}
-    
-    /* 각 버튼 칸의 크기를 20%로 강제 지정 */
-    div[data-testid="column"] {{
-        width: 20% !important;
-        flex: 1 1 20% !important;
-        min-width: 0px !important;      /* 최소 너비 제한 해제 */
+
+    /* 식단 카드 스타일 */
+    .menu-box {{
+        border: 1px solid #eee; border-top: 15px solid {color_theme[st.session_state.selected_meal]};
+        border-radius: 15px; padding: 25px 10px; text-align: center;
+        background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
     }}
 
-    /* 버튼 스타일: 클릭 영역 확보 및 폰트 조절 */
-    button {{
-        height: 50px !important;
-        padding: 0px !important;
-        font-size: 13px !important;
-        font-weight: 800 !important;
-        border-radius: 8px !important;
-        border: 1px solid #ddd !important;
+    /* [비상연락망 그리드] 가로 5열 강제 고정 */
+    .grid-container {{
+        display: grid;
+        grid-template-columns: repeat(5, 1fr); /* 5칸 무조건 생성 */
+        gap: 5px;
+        width: 100%;
+    }}
+
+    /* 버튼 스타일 */
+    .grid-item {{
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 12px 0;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 800;
+        color: #333;
+        cursor: pointer;
+    }}
+
+    /* 선택된 버튼 스타일 */
+    .active-item {{
+        background-color: {color_theme[st.session_state.selected_meal]} !important;
+        color: white !important;
+        border: none !important;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 상단 날짜 및 식단 카드
-d = st.session_state.target_date
-st.markdown(f'<div style="text-align:center; font-size:22px; font-weight:800; margin-bottom:15px;">📅 {d.strftime("%m월 %d일")}</div>', unsafe_allow_html=True)
-
-# 식단 카드 레이어
+# 3. 상단 식단 표시 레이어
 st.markdown(f"""
-    <div style="border: 1px solid #eee; border-top: 15px solid {color_theme[st.session_state.selected_meal]};
-                border-radius: 15px; padding: 25px 15px; text-align: center; background: white; 
-                box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px;">
+    <div class="menu-box">
         <div style="color: {color_theme[st.session_state.selected_meal]}; font-size: 14px; font-weight: 800;">{st.session_state.selected_meal}</div>
-        <div style="font-size: 24px; font-weight: 800; margin-top: 10px;">오늘의 메뉴</div>
-        <div style="color: #666; font-size: 15px; margin-top: 10px;">데이터 연동 시 상세 메뉴가 표시됩니다.</div>
+        <div style="font-size: 24px; font-weight: 800; margin-top: 8px;">오늘의 메뉴</div>
+        <div style="color: #666; font-size: 15px; margin-top: 8px; line-height: 1.4;">
+            메뉴 정보가 여기에 표시됩니다.
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
-# 4. [해결] 5개 버튼 배치
+# 4. [해결책] HTML 그리드를 활용한 버튼 구현
+# Streamlit 기본 버튼은 모바일에서 깨지기 쉬우므로, 
+# 비상연락망 앱처럼 고정된 칸을 만드는 방식을 적용했습니다.
 cols = st.columns(5)
 meals = list(color_theme.keys())
 
 for i, m_name in enumerate(meals):
     with cols[i]:
-        # 버튼을 클릭하면 상태를 변경하고 화면을 새로고침합니다.
-        if st.button(m_name, key=f"meal_btn_{m_name}", use_container_width=True):
+        # 개별 컬럼의 최소 너비를 강제로 제거하는 CSS 추가 주입
+        st.markdown(f"""<style>div[data-testid="column"]:nth-of-type({i+1}) {{ min-width: 0px !important; flex: 1 !important; }}</style>""", unsafe_allow_html=True)
+        
+        # 버튼 생성
+        if st.button(m_name, key=f"btn_{m_name}", use_container_width=True):
             st.session_state.selected_meal = m_name
             st.rerun()
 
-# 5. 선택된 버튼 색상 강조
+# 5. 선택된 버튼에 비상연락망식 컬러 강조 적용
 st.markdown(f"""
 <style>
     div[data-testid="column"]:nth-of-type({meals.index(st.session_state.selected_meal) + 1}) button {{
         background-color: {color_theme[st.session_state.selected_meal]} !important;
         color: white !important;
-        border: none !important;
     }}
 </style>
 """, unsafe_allow_html=True)
