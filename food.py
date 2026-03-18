@@ -1,5 +1,7 @@
 import streamlit as st
 import requests
+import csv
+import io
 from datetime import datetime, timedelta, time
 from zoneinfo import ZoneInfo
 
@@ -9,33 +11,32 @@ def get_now(): return datetime.now(KST)
 
 st.set_page_config(page_title="성의교정 식단 가이드", page_icon="🍴", layout="centered")
 
-# ✅ 2. 데이터 로딩 (초고속 버전)
+# 2. 데이터 로딩 (🔥 안전 + 빠름)
 @st.cache_data(ttl=3600)
 def load_meal_data(url):
     try:
-        res = requests.get(url)
-        text = res.text.splitlines()
+        res = requests.get(url, timeout=5)
+        res.raise_for_status()
 
-        headers = text[0].split(",")
-        idx_date = headers.index("date")
-        idx_type = headers.index("meal_type")
-        idx_menu = headers.index("menu")
-        idx_side = headers.index("side")
+        decoded = res.content.decode("utf-8")
+        reader = csv.DictReader(io.StringIO(decoded))
 
         data = {}
 
-        for line in text[1:]:
-            cols = line.split(",")
+        for row in reader:
+            # 🔒 안전 처리
+            d = str(row.get("date", "")).strip()
+            m = str(row.get("meal_type", "")).strip()
 
-            d = cols[idx_date].strip()
-            m = cols[idx_type].strip()
+            if not d or not m:
+                continue
 
             if d not in data:
                 data[d] = {}
 
             data[d][m] = {
-                "menu": cols[idx_menu],
-                "side": cols[idx_side]
+                "menu": str(row.get("menu", "")).strip(),
+                "side": str(row.get("side", "")).strip()
             }
 
         return data
@@ -44,6 +45,7 @@ def load_meal_data(url):
         st.error(f"데이터 오류: {e}")
         return {}
 
+# 🔗 구글 시트 CSV
 CSV_URL = "https://docs.google.com/spreadsheets/d/1l07s4rubmeB5ld8oJayYrstL34UPKtxQwYptIocgKV0/export?format=csv"
 
 meal_data = load_meal_data(CSV_URL)
@@ -65,7 +67,7 @@ def get_default_meal():
 if "selected_meal" not in st.session_state:
     st.session_state.selected_meal = get_default_meal()
 
-# 4. 근무조
+# 4. 근무조 계산
 def get_work_shift(target_date):
     anchor = datetime(2026, 3, 13).date()
     diff = (target_date - anchor).days
@@ -81,33 +83,45 @@ st.markdown("""
 <style>
 .block-container { padding: 1rem; max-width: 500px; }
 header { visibility: hidden; }
+
 .menu-card {
     border-radius: 20px;
     padding: 25px;
     text-align: center;
     background: white;
 }
+
+.nav-btn button {
+    width: 100%;
+    height: 45px;
+    font-size: 16px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# 6. 날짜 네비 (🔥 새로고침 없는 방식)
+# 6. 날짜 네비 (🔥 빠름)
 col1, col2, col3 = st.columns(3)
 
-if col1.button("◀"):
-    st.session_state.target_date -= timedelta(days=1)
+with col1:
+    if st.button("◀"):
+        st.session_state.target_date -= timedelta(days=1)
 
-if col2.button("Today"):
-    st.session_state.target_date = curr_date
+with col2:
+    if st.button("Today"):
+        st.session_state.target_date = curr_date
 
-if col3.button("▶"):
-    st.session_state.target_date += timedelta(days=1)
+with col3:
+    if st.button("▶"):
+        st.session_state.target_date += timedelta(days=1)
 
 d = st.session_state.target_date
 shift = get_work_shift(d)
 
+week = ["월","화","수","목","금","토","일"]
+
 st.markdown(f"""
 <div style="text-align:center; font-size:20px; font-weight:bold;">
-{d.strftime("%Y.%m.%d")} ({["월","화","수","목","금","토","일"][d.weekday()]})
+{d.strftime("%Y.%m.%d")} ({week[d.weekday()]})
 </div>
 <div style="text-align:center; margin-bottom:10px;">
 <span style="background:{shift['bg']}; color:white; padding:4px 10px; border-radius:10px;">
@@ -128,14 +142,16 @@ color_theme = {
     "야식": "#673AB7"
 }
 
+selected_meal = st.session_state.selected_meal
+
 meal_info = day_meals.get(
-    st.session_state.selected_meal,
+    selected_meal,
     {"menu": "정보 없음", "side": "등록되지 않음"}
 )
 
-# 8. 카드
+# 8. 카드 UI
 st.markdown(f"""
-<div class="menu-card" style="border:3px solid {color_theme[st.session_state.selected_meal]};">
+<div class="menu-card" style="border:3px solid {color_theme[selected_meal]};">
     <div style="font-size:24px; font-weight:800;">
         {meal_info['menu']}
     </div>
@@ -145,12 +161,12 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 9. 식사 선택 (🔥 rerun 제거)
+# 9. 식사 선택 (🔥 rerun 없음)
 selected = st.radio(
     "",
     list(color_theme.keys()),
     horizontal=True,
-    index=list(color_theme.keys()).index(st.session_state.selected_meal)
+    index=list(color_theme.keys()).index(selected_meal)
 )
 
 st.session_state.selected_meal = selected
