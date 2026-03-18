@@ -25,34 +25,42 @@ CSV_URL = "https://docs.google.com/spreadsheets/d/1l07s4rubmeB5ld8oJayYrstL34UPK
 meal_data = load_meal_data(CSV_URL)
 color_theme = {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 
-# 3. CSS (카드와 버튼 밀착 및 디자인 최적화)
+# 3. [핵심] 모바일 가로 5열 강제 CSS
 st.markdown(f"""
 <style>
-    .block-container {{ padding: 1rem 0.5rem !important; max-width: 480px !important; }}
+    /* 전체 레이아웃 폭 조정 */
+    .block-container {{ padding: 1rem 0.5rem !important; max-width: 500px !important; }}
     header {{ visibility: hidden; }}
     
-    /* 식단 카드: 하단 마진 제거하여 버튼과 밀착 */
+    /* 식단 카드: 하단 마진 제거하여 버튼 바와 연결 */
     .menu-card {{ 
-        border: 1px solid #ddd; border-top: 12px solid {color_theme[st.session_state.selected_meal]};
-        border-radius: 15px 15px 0 0; padding: 25px 15px; text-align: center; 
+        border: 1px solid #ddd; border-top: 15px solid {color_theme[st.session_state.selected_meal]};
+        border-radius: 15px 15px 0 0; padding: 25px 10px; text-align: center; 
         background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         margin-bottom: 0px;
     }}
 
-    /* 버튼 컨테이너: 카드와 붙이기 위해 여백 조정 */
-    div[data-testid="stHorizontalBlock"] {{
-        gap: 2px !important;
-        background: #f8f9fa;
+    /* 버튼 컨테이너: 모바일에서도 가로 5열 강제 */
+    .button-grid {{
+        display: flex !important;
+        flex-direction: row !important;
+        width: 100%;
+        gap: 4px;
         padding: 5px;
+        background: #f8f9fa;
         border: 1px solid #ddd;
         border-top: none;
         border-radius: 0 0 15px 15px;
     }}
+    
+    /* Streamlit 컬럼 내부의 버튼들이 세로로 쌓이는 것을 방지 */
+    [data-testid="column"] {{
+        width: calc(20% - 4px) !important;
+        flex: 1 1 calc(20% - 4px) !important;
+        min-width: calc(20% - 4px) !important;
+    }}
 
-    /* Streamlit 기본 버튼 개조 */
-    div[data-testid="stHorizontalBlock"] button {{
-        border: none !important;
-        border-radius: 8px !important;
+    button {{
         height: 45px !important;
         padding: 0 !important;
         font-size: 13px !important;
@@ -66,7 +74,7 @@ d = st.session_state.target_date
 w_list = ["월","화","수","목","금","토","일"]
 st.markdown(f'<div style="text-align:center; font-size:22px; font-weight:800; margin-bottom:15px;">📅 {d.strftime("%m월 %d일")} ({w_list[d.weekday()]})</div>', unsafe_allow_html=True)
 
-# 상단 날짜 이동
+# 날짜 변경 (상단)
 c1, c2, c3 = st.columns(3)
 with c1: 
     if st.button("◀ 이전날", use_container_width=True): st.session_state.target_date -= timedelta(1); st.rerun()
@@ -75,7 +83,7 @@ with c2:
 with c3:
     if st.button("다음날 ▶", use_container_width=True): st.session_state.target_date += timedelta(1); st.rerun()
 
-# 5. 식단 카드 (상단 부분)
+# 5. 식단 카드 표시
 key = (d.strftime("%Y-%m-%d"), st.session_state.selected_meal)
 meal_info = meal_data.get(key, {"menu": "정보 없음", "side": "식단 정보가 없습니다."})
 
@@ -87,23 +95,25 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# 6. 식단 선택 버튼 (카드 바로 아래에 밀착된 5열 그리드)
-cols = st.columns(5)
-for i, (m_name, m_color) in enumerate(color_theme.items()):
-    with cols[i]:
-        is_sel = (st.session_state.selected_meal == m_name)
-        # 선택된 버튼은 고유 컬러 적용, 나머지는 연한 회색
-        if st.button(m_name, key=f"m_{i}", use_container_width=True, 
-                     type="primary" if is_sel else "secondary"):
-            st.session_state.selected_meal = m_name
-            st.rerun()
+# 6. [해결] 버튼 그리드
+# st.container와 columns를 조합하고 CSS로 가로를 강제합니다.
+with st.container():
+    cols = st.columns(5)
+    for i, (m_name, m_color) in enumerate(color_theme.items()):
+        with cols[i]:
+            is_sel = (st.session_state.selected_meal == m_name)
+            if st.button(m_name, key=f"btn_{i}", use_container_width=True):
+                st.session_state.selected_meal = m_name
+                st.rerun()
 
-# 선택된 버튼 색상을 CSS로 강제 주입 (Streamlit 기본 primary 색상 변경)
+# 선택된 버튼 색상을 CSS로 개별 주입
 st.markdown(f"""
 <style>
-    div[data-testid="stHorizontalBlock"] button[kind="primary"] {{
+    /* 선택된 버튼에만 해당 식단 고유 컬러 적용 */
+    div[data-testid="column"]:nth-of-type({list(color_theme.keys()).index(st.session_state.selected_meal) + 1}) button {{
         background-color: {color_theme[st.session_state.selected_meal]} !important;
         color: white !important;
+        border: none !important;
     }}
 </style>
 """, unsafe_allow_html=True)
