@@ -3,166 +3,165 @@ import pandas as pd
 from datetime import datetime, timedelta, time
 from zoneinfo import ZoneInfo
 
-# 1. 기초 설정 및 시간대
+# 1. 기초 설정 (한국 시간 고정)
 KST = ZoneInfo("Asia/Seoul")
 def get_now(): return datetime.now(KST)
 
-st.set_page_config(page_title="성의교정 식단 가이드", page_icon="🍴", layout="centered")
+st.set_page_config(page_title="성의교정 식단", page_icon="🍽️", layout="centered")
 
-# [개선] 데이터 로딩 함수 (캐싱 적용)
-@st.cache_data(ttl=600)  # 10분 동안 데이터를 메모리에 유지
-def load_meal_data(url):
+# 2. 데이터 로드
+@st.cache_data(ttl=600)
+def load_data(url):
     try:
-        # 구글 시트 CSV 읽기
         df = pd.read_csv(url)
-        structured_data = {}
-        for _, row in df.iterrows():
-            d_str = str(row['date']).strip()
-            m_type = str(row['meal_type']).strip()
-            if d_str not in structured_data:
-                structured_data[d_str] = {}
-            structured_data[d_str][m_type] = {
-                "menu": row['menu'],
-                "side": row['side']
-            }
-        return structured_data
-    except Exception as e:
-        st.error(f"데이터 연결 오류: {e}")
-        return {}
+        result = {}
+        for _, r in df.iterrows():
+            d = str(r['date']).strip()
+            m = str(r['meal_type']).strip()
+            result.setdefault(d, {})[m] = {"menu": str(r['menu']), "side": str(r['side'])}
+        return result
+    except: return {}
 
-# 근무조 계산 함수
-def get_work_shift(target_date):
-    anchor = datetime(2026, 3, 13).date()
-    diff = (target_date - anchor).days
-    shifts = [{"n": "A조", "bg": "#FF9800"}, {"n": "B조", "bg": "#E91E63"}, {"n": "C조", "bg": "#2196F3"}]
-    return shifts[diff % 3]
+URL = "https://docs.google.com/spreadsheets/d/1l07s4rubmeB5ld8oJayYrstL34UPKtxQwYptIocgKV0/export?format=csv"
+data = load_data(URL)
 
-# 2. 데이터 불러오기 및 세션 초기화
-CSV_URL = "https://docs.google.com/spreadsheets/d/1l07s4rubmeB5ld8oJayYrstL34UPKtxQwYptIocgKV0/export?format=csv"
-
-# 헤더 선출력 (사용자 응답성 향상)
-st.markdown("""
-<div style="text-align:center; padding: 15px 0 5px 0;">
-    <span style="
-        font-size: 35px !important; 
-        font-weight: 800; 
-        color: #1E3A5F; 
-        letter-spacing: -0.5px;
-        white-space: nowrap;
-    ">
-        🍽️ 성의교정 주간 식단
-    </span>
-</div>
-""", unsafe_allow_html=True)
-
-with st.spinner('최신 식단 정보를 가져오고 있습니다...'):
-    meal_data = load_meal_data(CSV_URL)
-
-now = get_now()
-curr_date = now.date()
-
-if 'target_date' not in st.session_state:
-    st.session_state.target_date = curr_date
-
-# 시간대별 기본 식사 설정
-def get_default_meal():
-    t = now.time()
-    if t < time(9, 0): return "조식"
-    if t < time(14, 0): return "중식"
-    if t < time(19, 20): return "석식"
-    return "중식"
-
-if 'selected_meal' not in st.session_state:
-    st.session_state.selected_meal = get_default_meal()
-
-# URL 파라미터 처리
+# 3. 날짜 및 파라미터 관리 (토요일 조회 오류 수정)
 params = st.query_params
+now_dt = get_now()
+today_date = now_dt.date()
+
+# URL 파라미터가 있으면 해당 날짜로, 없으면 '무조건' 오늘 날짜로 고정
 if "d" in params:
     try:
-        st.session_state.target_date = datetime.strptime(params["d"], "%Y-%m-%d").date()
-    except: pass
+        d = datetime.strptime(params["d"], "%Y-%m-%d").date()
+    except:
+        d = today_date
+else:
+    d = today_date
 
-# 3. 화면 레이아웃 및 스타일
-d = st.session_state.target_date
-shift = get_work_shift(d)
-w_list = ["월","화","수","목","금","토","일"]
-w_str = w_list[d.weekday()]
-w_class = "sat" if d.weekday() == 5 else ("sun" if d.weekday() == 6 else "")
+# 4. 상세 식사 시간 정의 (평일/주말 구분)
+is_weekend = d.weekday() >= 5 # 5:토, 6:일
+lunch_start = time(11, 30) if is_weekend else time(11, 20)
 
-color_theme = {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
-meal_times = {"조식": (time(7, 0), time(9, 0)), "중식": (time(11, 20), time(14, 0)), "석식": (time(17, 20), time(19, 20))}
+meal_schedule = {
+    "조식": {"start": time(7, 0), "end": time(9, 0)},
+    "간편식": {"start": time(10, 0), "end": time(11, 0)}, # 임의 설정
+    "중식": {"start": lunch_start, "end": time(14, 0)},
+    "석식": {"start": time(17, 20), "end": time(19, 20)},
+    "야식": {"start": time(22, 0), "end": time(23, 59)}
+}
 
+# 5. 실시간 상태 메시지 생성 함수
+def get_realtime_status(selected_meal):
+    now = get_now()
+    now_t = now.time()
+    
+    # 1단계: 현재 시간이 배식 중인지 확인
+    current_serving = None
+    for m, period in meal_schedule.items():
+        if period["start"] <= now_t <= period["end"]:
+            current_serving = m
+            break
+            
+    # 2단계: 메시지 결정
+    # 오늘 날짜를 보고 있을 때만 실시간 안내 적용
+    if d == today_date:
+        # 현재 선택한 탭이 실제 배식 중인 식단일 때
+        if selected_meal == current_serving:
+            return f"✅ 지금은 <span style='color:#8BC34A;'>{selected_meal} 배식 중</span>입니다! 맛있게 드세요."
+        
+        # 선택한 식단이 아직 배식 전일 때 (남은 시간 계산)
+        target_start = meal_schedule[selected_meal]["start"]
+        if now_t < target_start:
+            target_dt = datetime.combine(today_date, target_start, tzinfo=KST)
+            diff = target_dt - now
+            h, m = divmod(int(diff.total_seconds() // 60), 60)
+            t_str = f"{h}시간 {m}분" if h > 0 else f"{m}분"
+            return f"⏳ {selected_meal} 제공까지 <span style='color:#E95444;'>{t_str}</span> 남았습니다."
+        
+        # 이미 지난 식단일 때
+        if now_t > meal_schedule[selected_meal]["end"]:
+            return f"🏁 {selected_meal} 배식이 종료되었습니다."
+            
+    return f"📅 {d.strftime('%m월 %d일')} {selected_meal} 식단입니다."
+
+# 탭 선택 상태 (파라미터 우선)
+selected = params.get("meal", "중식")
+
+# 6. 근무조 및 요일 설정
+def get_shift(target_d):
+    anchor = datetime(2026, 3, 13).date() # 기준일
+    arr = [{"n":"A조","bg":"#FF9800"}, {"n":"B조","bg":"#E91E63"}, {"n":"C조","bg":"#2196F3"}]
+    return arr[(target_d - anchor).days % 3]
+
+weekday_names = ["월", "화", "수", "목", "금", "토", "일"]
+wd = d.weekday()
+wd_name = weekday_names[wd]
+wd_color = "#2196F3" if wd == 5 else "#E91E63" if wd == 6 else "#1E3A5F"
+
+s = get_shift(d)
+colors = {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
+sel_c = colors.get(selected, "#8BC34A")
+
+# 7. CSS 스타일
 st.markdown(f"""
 <style>
-    .block-container {{ padding: 1rem 1.2rem !important; max-width: 500px !important; }}
+    [data-testid="stAppViewBlockContainer"] {{ max-width: 400px !important; margin: 0 auto !important; padding: 1rem 10px !important; }}
     header {{ visibility: hidden; }}
-    .date-box {{ text-align: center; background: #F8FAFF; padding: 15px 10px 8px; border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none; }}
-    .res-sub-title {{ font-size: 18px !important; font-weight: 700; color: #333; }}
-    .sat {{ color: #0000FF !important; }} .sun {{ color: #FF0000 !important; }}
-    .nav-bar {{ display: flex; width: 100%; background: white; border: 1px solid #D1D9E6; border-radius: 0 0 10px 10px; margin-bottom: 20px; }}
-    .nav-btn {{ flex: 1; text-align: center; padding: 10px 0; text-decoration: none; color: #1E3A5F; font-weight: bold; font-size: 13px; border-right: 1px solid #F0F0F0; }}
-    .menu-card {{ border: 3px solid var(--c); border-radius: 20px 20px 0 0; padding: 25px 15px; text-align: center; background: white; min-height: 200px; display: flex; flex-direction: column; justify-content: center; }}
-    .tab-wrap {{ display: flex; width: 100%; margin-top: -3px; }}
-    .tab-item {{ flex: 1; text-align: center; padding: 10px 0; font-size: 12px; font-weight: bold; color: white; }}
-    div[data-testid="stRadio"] > div {{ display: flex !important; flex-wrap: nowrap !important; background: #f1f3f5; padding: 10px 2px !important; border-radius: 0 0 20px 20px; }}
-    div[data-testid="stRadio"] label p {{ font-size: 12px !important; font-weight: 800 !important; white-space: nowrap !important; }}
-    .msg-box {{ text-align: center; background: #f8f9fa; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: bold; color: #555; margin-top: 15px; }}
+    .date-box {{ text-align: center; background: #F4F7FF; padding: 15px; border-radius: 15px; font-weight: 800; border: 1px solid #D6DCEC; font-size: 18px; }}
+    .status-msg {{ text-align: center; font-size: 13px; font-weight: 700; color: #555; margin: 10px 0; min-height: 20px; }}
+    .nav-row {{ display: flex; justify-content: space-between; margin-bottom: 10px; gap: 5px; }}
+    .nav-btn {{ flex: 1; text-align: center; padding: 10px; background: white; border: 1px solid #EEE; border-radius: 8px; text-decoration: none; color: #1E3A5F; font-size: 13px; font-weight: 700; }}
+    .tab-container {{ display: flex; width: 100%; margin-top: 15px; gap: 2px; }}
+    .tab-item {{ flex: 1; text-align: center; padding: 12px 0; font-size: 12px; font-weight: 800; color: #333 !important; text-decoration: none; border-radius: 10px 10px 0 0; opacity: 0.6; transition: 0.2s; }}
+    .tab-item.active {{ opacity: 1; color: white !important; transform: translateY(-2px); }}
+    
+    .menu-card {{
+        border: 2px solid {sel_c}; border-top: 5px solid {sel_c}; border-radius: 0 0 20px 20px;
+        height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        padding: 20px; background: white; margin-top: -1px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); text-align: center;
+    }}
+    .main-menu {{ font-size: 21px; font-weight: 900; color: #111; line-height: 1.4; margin-bottom: 15px; }}
+    .side-menu {{ color: #666; font-size: 15px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }}
 </style>
 """, unsafe_allow_html=True)
 
-# 날짜 네비게이션
+# 8. UI 렌더링
 st.markdown(f"""
 <div class="date-box">
-    <span class="res-sub-title">{d.strftime("%Y.%m.%d")}.<span class="{w_class}">({w_str})</span>
-    <span style="background:{shift['bg']}; color:white; padding:2px 10px; border-radius:12px; font-size:14px; margin-left:5px;">{shift['n']}</span></span>
+    {d.strftime("%Y.%m.%d")} (<span style="color:{wd_color}">{wd_name}</span>)
+    <span style="background:{s['bg']}; color:white; padding:2px 8px; border-radius:10px; font-size:12px; margin-left:5px; vertical-align:middle;">{s['n']}</span>
 </div>
-<div class="nav-bar">
-    <a href="./?d={(d-timedelta(1)).strftime('%Y-%m-%d')}" target="_self" class="nav-btn">◀ Before</a>
-    <a href="./?d={curr_date.strftime('%Y-%m-%d')}" target="_self" class="nav-btn">Today</a>
-    <a href="./?d={(d+timedelta(1)).strftime('%Y-%m-%d')}" target="_self" class="nav-btn">Next ▶</a>
+<div class="status-msg">{get_realtime_status(selected)}</div>
+<div class="nav-row">
+    <a href="?d={(d-timedelta(1)).strftime('%Y-%m-%d')}&meal={selected}" class="nav-btn" target="_self">◀ 이전</a>
+    <a href="?d={today_date}&meal={selected}" class="nav-btn" target="_self">오늘</a>
+    <a href="?d={(d+timedelta(1)).strftime('%Y-%m-%d')}&meal={selected}" class="nav-btn" target="_self">다음 ▶</a>
 </div>
 """, unsafe_allow_html=True)
 
-# 식단 카드 출력
-date_key = d.strftime("%Y-%m-%d")
-day_meals = meal_data.get(date_key, {})
-meal_info = day_meals.get(st.session_state.selected_meal, {"menu": "정보 없음", "side": "식단 정보가 등록되지 않았습니다."})
-sel_color = color_theme[st.session_state.selected_meal]
+# 9. 탭 메뉴
+tabs_html = '<div class="tab-container">'
+for m, c in colors.items():
+    is_active = "active" if m == selected else ""
+    tabs_html += f'<a href="?d={d}&meal={m}" class="tab-item {is_active}" style="background:{c}" target="_self">{m}</a>'
+tabs_html += '</div>'
+st.markdown(tabs_html, unsafe_allow_html=True)
+
+# 10. 식단 출력 및 예외 처리
+meal_info = data.get(d.strftime("%Y-%m-%d"), {}).get(selected)
+
+if meal_info and str(meal_info['menu']).strip() not in ["", "nan", "None"]:
+    main_m = meal_info['menu']
+    side_m = meal_info['side']
+else:
+    main_m = "오늘은 간편식을<br>제공하지 않습니다." if selected == "간편식" else "식단 정보 없음"
+    side_m = "" if selected == "간편식" else "해당 일자의 식단이 등록되지 않았습니다."
 
 st.markdown(f"""
-    <div class="menu-card" style="--c: {sel_color};">
-        <div style="font-size: 26px; font-weight: 800; color: #111; margin-bottom: 12px;">{meal_info['menu']}</div>
-        <div style="height: 1px; background: #eee; width: 30%; margin: 0 auto;"></div>
-        <div style="color: #444; font-size: 16px; margin-top: 15px; line-height: 1.5; word-break: keep-all;">{meal_info['side']}</div>
-    </div>
+<div class="menu-card">
+    <div class="main-menu">{main_m}</div>
+    <div style="width:30%; height:1.5px; background:#F0F0F0; margin:15px auto;"></div>
+    <div class="side-menu">{side_m}</div>
+</div>
 """, unsafe_allow_html=True)
-
-# 탭 버튼 UI
-st.markdown('<div class="tab-wrap">' + "".join([f'<div class="tab-item" style="background:{c}; opacity:{"1" if m==st.session_state.selected_meal else "0.3"};">{m}</div>' for m,c in color_theme.items()]) + '</div>', unsafe_allow_html=True)
-
-selected = st.radio("select", options=list(color_theme.keys()), index=list(color_theme.keys()).index(st.session_state.selected_meal), horizontal=True, label_visibility="collapsed")
-if selected != st.session_state.selected_meal:
-    st.session_state.selected_meal = selected
-    st.rerun()
-
-# 4. 시간 메시지 로직
-msg = "💡 식단 정보를 확인 중입니다."
-if st.session_state.selected_meal in meal_times:
-    s_t, e_t = meal_times[st.session_state.selected_meal]
-    t_dt_s = datetime.combine(d, s_t).replace(tzinfo=KST)
-    t_dt_e = datetime.combine(d, e_t).replace(tzinfo=KST)
-
-    if d < curr_date:
-        msg = "🚩 이미 배식이 종료된 식단입니다."
-    elif d > curr_date:
-        msg = f"🗓️ {d.strftime('%m/%d')} 배식 예정인 식단입니다."
-    else:
-        if now < t_dt_s:
-            diff = t_dt_s - now
-            msg = f"⏳ {st.session_state.selected_meal} 시작까지 {diff.seconds//3600}시간 {(diff.seconds%3600)//60}분 남음"
-        elif now <= t_dt_e:
-            msg = f"🍴 {st.session_state.selected_meal} 배식 중! 종료까지 {((t_dt_e-now).seconds%3600)//60}분 남음"
-        else:
-            msg = "🚩 이미 배식이 종료된 식단입니다."
-
-st.markdown(f'<div class="msg-box">{msg}</div>', unsafe_allow_html=True)
