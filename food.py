@@ -44,7 +44,7 @@ meal_schedule = {
 }
 
 def get_realtime_status(selected_meal):
-    if d != today_date: return f"📅 {d.strftime('%m월 %d일')} {selected_meal} 식단"
+    if d != today_date: return f"📅 {d.strftime('%m월 %d일')} {selected_meal}"
     now_t = get_now().time()
     sched = meal_schedule[selected_meal]
     if sched["start"] <= now_t <= sched["end"]:
@@ -53,7 +53,7 @@ def get_realtime_status(selected_meal):
         target_dt = datetime.combine(today_date, sched["start"], tzinfo=KST)
         diff = target_dt - get_now()
         h, m = divmod(int(diff.total_seconds() // 60), 60)
-        return f"⏳ {selected_meal} 제공까지 {'%d시간 ' % h if h > 0 else ''}{m}분 남음"
+        return f"⏳ {'%d시간 ' % h if h > 0 else ''}{m}분 후 시작"
     return f"🏁 {selected_meal} 배식 종료"
 
 # 5. 근무조 및 색상
@@ -68,46 +68,44 @@ wd_color = "#2196F3" if wd == 5 else "#E91E63" if wd == 6 else "#1E3A5F"
 s, colors = get_shift(d), {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 sel_c = colors.get(selected, "#8BC34A")
 
-# 6. 정밀 여백 조절 CSS
+# 6. 레이아웃 안정화 CSS
 st.markdown(f"""
 <style>
     [data-testid="stAppViewBlockContainer"] {{ 
         max-width: 400px !important; margin: 0 auto !important; 
-        padding-top: 1rem !important; padding-bottom: 1rem !important;
+        padding-top: 1.5rem !important; padding-bottom: 1rem !important;
         padding-left: 10px !important; padding-right: 10px !important;
     }}
     header {{ visibility: hidden; }}
     div[data-testid="stVerticalBlock"] {{ gap: 0rem !important; }}
 
-    /* 타이틀: 높이 확보 및 아래 간격 조정 */
+    /* 타이틀: 겹침 방지를 위해 margin-bottom 확보 */
     .main-title {{
-        text-align: center; font-size: 22px; font-weight: 900; color: #1E3A5F;
-        margin-bottom: 15px; /* 날짜 박스와의 간격 */
-        line-height: 1.5; /* 글자 잘림 방지 */
+        text-align: center; font-size: 24px; font-weight: 900; color: #1E3A5F;
+        margin-bottom: 20px; line-height: 1.4; display: block;
     }}
     
-    /* 날짜박스: 내부 여백 절반 축소 */
+    /* 날짜박스: 내부 여백 최적화 */
     .date-box {{ 
         text-align: center; background: #F4F7FF; 
-        padding: 6px 12px; /* 상하 여백 절반(6px) 축소 */
-        border-radius: 15px; font-weight: 800; border: 1px solid #D6DCEC; 
-        font-size: 17px; margin-bottom: 5px; line-height: 1.4; 
+        padding: 8px 10px; border-radius: 15px; font-weight: 800; 
+        border: 1px solid #D6DCEC; font-size: 17px; margin-bottom: 5px; line-height: 1.4; 
     }}
     
-    .status-msg {{ text-align: center; font-size: 13px; font-weight: 700; color: #555; margin: 10px 0; min-height: 20px; line-height: 1.4; }}
+    .status-msg {{ text-align: center; font-size: 13px; font-weight: 700; color: #555; margin: 12px 0; min-height: 20px; line-height: 1.4; }}
     
-    .nav-row {{ display: flex; justify-content: space-between; gap: 5px; margin-bottom: 10px; }}
-    .nav-btn {{ flex: 1; text-align: center; padding: 8px; background: white; border: 1px solid #EEE; border-radius: 8px; text-decoration: none; color: #1E3A5F; font-size: 13px; font-weight: 700; }}
+    .nav-row {{ display: flex; justify-content: space-between; gap: 8px; margin-bottom: 12px; }}
+    .nav-btn {{ flex: 1; text-align: center; padding: 10px; background: white; border: 1px solid #EEE; border-radius: 10px; text-decoration: none; color: #1E3A5F; font-size: 13px; font-weight: 800; }}
     
     .tab-container {{ display: flex; width: 100%; gap: 1px; }}
-    .tab-item {{ flex: 1; text-align: center; padding: 10px 0; font-size: 12px; font-weight: 800; color: #333 !important; text-decoration: none; border-radius: 8px 8px 0 0; opacity: 0.5; }}
+    .tab-item {{ flex: 1; text-align: center; padding: 12px 0; font-size: 12px; font-weight: 800; color: #333 !important; text-decoration: none; border-radius: 8px 8px 0 0; opacity: 0.5; }}
     .tab-item.active {{ opacity: 1; color: white !important; }}
     
-    /* 메뉴 카드: 줄 간격 확보로 잘림 방지 */
+    /* 메뉴 카드 가독성 확보 */
     .menu-card {{
         border: 2px solid {sel_c}; border-top: 4px solid {sel_c}; border-radius: 0 0 15px 15px;
-        min-height: 220px; display: flex; flex-direction: column; justify-content: center; align-items: center;
-        padding: 20px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: center;
+        min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        padding: 25px 20px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: center;
     }}
     .main-menu {{ font-size: 20px; font-weight: 900; color: #111; line-height: 1.5; margin-bottom: 12px; }}
     .side-menu {{ color: #666; font-size: 15px; line-height: 1.6; }}
@@ -117,7 +115,7 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# 7. UI 구성
+# 7. UI 구성 (타이틀 및 네비게이션 영문 변경)
 st.markdown('<div class="main-title">🍽️ 성의교정 주간식단</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
@@ -126,10 +124,11 @@ st.markdown(f"""
     <span style="background:{s['bg']}; color:white; padding:2px 8px; border-radius:10px; font-size:12px; margin-left:5px; vertical-align:middle;">{s['n']}</span>
 </div>
 <div class="status-msg">{get_realtime_status(selected)}</div>
+
 <div class="nav-row">
-    <a href="?d={(d-timedelta(1)).strftime('%Y-%m-%d')}&meal={selected}" class="nav-btn" target="_self">◀ 이전</a>
-    <a href="?d={today_date}&meal={selected}" class="nav-btn" target="_self">오늘</a>
-    <a href="?d={(d+timedelta(1)).strftime('%Y-%m-%d')}&meal={selected}" class="nav-btn" target="_self">다음 ▶</a>
+    <a href="?d={(d-timedelta(1)).strftime('%Y-%m-%d')}&meal={selected}" class="nav-btn" target="_self">PREV</a>
+    <a href="?d={today_date}&meal={selected}" class="nav-btn" target="_self">TODAY</a>
+    <a href="?d={(d+timedelta(1)).strftime('%Y-%m-%d')}&meal={selected}" class="nav-btn" target="_self">NEXT</a>
 </div>
 """, unsafe_allow_html=True)
 
@@ -143,7 +142,7 @@ meal_info = data.get(d.strftime("%Y-%m-%d"), {}).get(selected)
 if meal_info and str(meal_info['menu']).strip() not in ["", "nan", "None"]:
     main_m, side_m = meal_info['menu'], meal_info['side']
 else:
-    main_m = "오늘은 간편식을<br>제공하지 않습니다." if selected == "간편식" else "식단 정보 없음"
+    main_m = "No Menu Available" if selected == "간편식" else "정보 없음"
     side_m = ""
 
 st.markdown(f"""
