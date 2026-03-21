@@ -68,43 +68,45 @@ wd_color = "#2196F3" if wd == 5 else "#E91E63" if wd == 6 else "#1E3A5F"
 s, colors = get_shift(d), {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 sel_c = colors.get(selected, "#8BC34A")
 
-# 6. 여백 극소화 CSS
+# 6. 여백 최적화 및 글자 보호 CSS
 st.markdown(f"""
 <style>
-    /* 전체 여백 제거 */
+    /* 상단 기본 여백 제거하되 컨텐츠 보호 */
     [data-testid="stAppViewBlockContainer"] {{ 
         max-width: 400px !important; margin: 0 auto !important; 
-        padding-top: 0rem !important; padding-bottom: 0rem !important;
+        padding-top: 0.5rem !important; padding-bottom: 1rem !important;
         padding-left: 10px !important; padding-right: 10px !important;
     }}
     header {{ visibility: hidden; }}
     div[data-testid="stVerticalBlock"] {{ gap: 0rem !important; }}
 
-    /* 타이틀 디자인 및 마진 극소화 */
+    /* 타이틀: 잘림 방지를 위해 line-height 확보 */
     .main-title {{
-        text-align: center; font-size: 20px; font-weight: 900; color: #1E3A5F;
-        margin: 5px 0 5px 0; letter-spacing: -1px; line-height: 1.1;
+        text-align: center; font-size: 22px; font-weight: 900; color: #1E3A5F;
+        margin: 10px 0 15px 0; letter-spacing: -0.5px; line-height: 1.4;
     }}
-    .date-box {{ text-align: center; background: #F4F7FF; padding: 10px; border-radius: 15px; font-weight: 800; border: 1px solid #D6DCEC; font-size: 16px; margin-bottom: 5px; }}
-    .status-msg {{ text-align: center; font-size: 12.5px; font-weight: 700; color: #555; margin: 5px 0; min-height: 20px; }}
     
-    .nav-row {{ display: flex; justify-content: space-between; gap: 5px; margin-bottom: 8px; }}
-    .nav-btn {{ flex: 1; text-align: center; padding: 6px; background: white; border: 1px solid #EEE; border-radius: 8px; text-decoration: none; color: #1E3A5F; font-size: 12px; font-weight: 700; }}
+    .date-box {{ text-align: center; background: #F4F7FF; padding: 12px; border-radius: 15px; font-weight: 800; border: 1px solid #D6DCEC; font-size: 17px; margin-bottom: 5px; line-height: 1.2; }}
+    .status-msg {{ text-align: center; font-size: 13px; font-weight: 700; color: #555; margin: 8px 0; min-height: 20px; line-height: 1.4; }}
+    
+    .nav-row {{ display: flex; justify-content: space-between; gap: 5px; margin-bottom: 10px; }}
+    .nav-btn {{ flex: 1; text-align: center; padding: 8px; background: white; border: 1px solid #EEE; border-radius: 8px; text-decoration: none; color: #1E3A5F; font-size: 13px; font-weight: 700; }}
     
     .tab-container {{ display: flex; width: 100%; gap: 1px; }}
-    .tab-item {{ flex: 1; text-align: center; padding: 8px 0; font-size: 11.5px; font-weight: 800; color: #333 !important; text-decoration: none; border-radius: 8px 8px 0 0; opacity: 0.5; }}
+    .tab-item {{ flex: 1; text-align: center; padding: 10px 0; font-size: 12px; font-weight: 800; color: #333 !important; text-decoration: none; border-radius: 8px 8px 0 0; opacity: 0.5; }}
     .tab-item.active {{ opacity: 1; color: white !important; }}
     
+    /* 카드 디자인 최적화 */
     .menu-card {{
         border: 2px solid {sel_c}; border-top: 4px solid {sel_c}; border-radius: 0 0 15px 15px;
-        height: 220px; display: flex; flex-direction: column; justify-content: center; align-items: center;
-        padding: 15px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: center;
+        min-height: 220px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        padding: 20px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: center;
     }}
-    .main-menu {{ font-size: 18px; font-weight: 900; color: #111; line-height: 1.3; margin-bottom: 8px; }}
-    .side-menu {{ color: #666; font-size: 13.5px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }}
+    .main-menu {{ font-size: 20px; font-weight: 900; color: #111; line-height: 1.4; margin-bottom: 12px; }}
+    .side-menu {{ color: #666; font-size: 15px; line-height: 1.5; }}
     
-    /* 관리 버튼 숨기기 */
-    button[title="Manage app"] {{ display: none !important; }}
+    /* 관리 도구 숨기기 */
+    button[title="Manage app"], #MainMenu, footer, .stDeployButton {{ display: none !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -114,7 +116,7 @@ st.markdown('<div class="main-title">🍽️ 성의교정 주간식단</div>', u
 st.markdown(f"""
 <div class="date-box">
     {d.strftime("%Y.%m.%d")} (<span style="color:{wd_color}">{weekday_names[wd]}</span>)
-    <span style="background:{s['bg']}; color:white; padding:1px 6px; border-radius:8px; font-size:11px; margin-left:3px; vertical-align:middle;">{s['n']}</span>
+    <span style="background:{s['bg']}; color:white; padding:2px 8px; border-radius:10px; font-size:12px; margin-left:5px; vertical-align:middle;">{s['n']}</span>
 </div>
 <div class="status-msg">{get_realtime_status(selected)}</div>
 <div class="nav-row">
@@ -129,7 +131,7 @@ for m, c in colors.items():
     tabs_html += f'<a href="?d={d}&meal={m}" class="tab-item {"active" if m == selected else ""}" style="background:{c}" target="_self">{m}</a>'
 st.markdown(tabs_html + '</div>', unsafe_allow_html=True)
 
-# 8. 식단 출력
+# 8. 식단 출력 및 빈 데이터 처리
 meal_info = data.get(d.strftime("%Y-%m-%d"), {}).get(selected)
 if meal_info and str(meal_info['menu']).strip() not in ["", "nan", "None"]:
     main_m, side_m = meal_info['menu'], meal_info['side']
@@ -140,7 +142,7 @@ else:
 st.markdown(f"""
 <div class="menu-card">
     <div class="main-menu">{main_m}</div>
-    <div style="width:25%; height:1px; background:#EEE; margin:10px auto;"></div>
+    <div style="width:30%; height:1px; background:#EEE; margin:15px auto;"></div>
     <div class="side-menu">{side_m}</div>
 </div>
 """, unsafe_allow_html=True)
