@@ -9,7 +9,7 @@ def get_now(): return datetime.now(KST)
 
 st.set_page_config(page_title="성의교정 주간식단", page_icon="🍽️", layout="centered")
 
-# 2. 데이터 로드 (캐싱 적용)
+# 2. 데이터 로드
 @st.cache_data(ttl=600)
 def load_data(url):
     try:
@@ -32,7 +32,7 @@ today_date = now_dt.date()
 d = datetime.strptime(params["d"], "%Y-%m-%d").date() if "d" in params else today_date
 selected = params.get("meal", "중식")
 
-# 4. 배식 안내 로직 (사용자 선호 스타일)
+# 4. 배식 안내 문구 로직
 is_weekend = d.weekday() >= 5
 lunch_start = time(11, 30) if is_weekend else time(11, 20)
 meal_schedule = {
@@ -57,7 +57,7 @@ def get_realtime_status(selected_meal):
         return f"⏳ {selected_meal} 제공까지 {t_str} 남았습니다."
     return f"🏁 {selected_meal} 배식이 종료되었습니다."
 
-# 5. 근무조 및 테마
+# 5. 근무조 및 테마 컬러
 def get_shift(target_d):
     anchor = datetime(2026, 3, 13).date()
     arr = [{"n":"A조","bg":"#FF9800"}, {"n":"B조","bg":"#E91E63"}, {"n":"C조","bg":"#2196F3"}]
@@ -69,62 +69,58 @@ wd_color = "#2196F3" if wd == 5 else "#E91E63" if wd == 6 else "#1E3A5F"
 s, colors = get_shift(d), {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 sel_c = colors.get(selected, "#8BC34A")
 
-# 6. 여백 및 정렬 보정 CSS
+# 6. 이미지 기반 스타일 커스텀 CSS
 st.markdown(f"""
 <style>
     [data-testid="stAppViewBlockContainer"] {{ 
-        max-width: 400px !important; margin: 0 auto !important; 
-        padding-top: 1.5rem !important; padding-bottom: 2rem !important;
-        padding-left: 15px !important; padding-right: 15px !important;
+        max-width: 450px !important; margin: 0 auto !important; 
+        padding-top: 2rem !important; padding-bottom: 2rem !important;
     }}
     header {{ visibility: hidden; }}
     div[data-testid="stVerticalBlock"] {{ gap: 0rem !important; }}
 
-    /* 타이틀 하단 여백 확대 */
     .main-title {{
-        text-align: center; font-size: 26px; font-weight: 900; color: #1E3A5F;
-        padding: 10px 0; margin-bottom: 15px; line-height: 1.2;
+        text-align: center; font-size: 28px; font-weight: 900; color: #1E3A5F;
+        margin-bottom: 20px; line-height: 1.2;
     }}
     
-    /* 날짜 박스 슬림화 및 간격 유지 */
     .date-box {{ 
-        text-align: center; background: #F4F7FF; 
-        padding: 8px 12px; border-radius: 15px; font-weight: 800; 
-        border: 1px solid #D6DCEC; font-size: 17px; margin-bottom: 8px; line-height: 1.2; 
+        text-align: center; background: #F4F7FF; padding: 10px; border-radius: 15px; 
+        font-weight: 800; border: 1px solid #D6DCEC; font-size: 18px; margin-bottom: 15px;
     }}
     
-    /* 상태 메시지 상하 여백 확대 */
-    .status-msg {{ text-align: center; font-size: 14px; font-weight: 700; color: #555; margin: 15px 0; min-height: 24px; }}
+    .status-msg {{ text-align: center; font-size: 15px; font-weight: 700; color: #555; margin-bottom: 25px; }}
     
-    /* 네비게이션 바 버튼 간격 및 패딩 최적화 */
-    .nav-row {{ display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; }}
+    .nav-row {{ display: flex; justify-content: space-between; gap: 10px; margin-bottom: 25px; }}
     .nav-btn {{ 
-        flex: 1; text-align: center; padding: 8px 0; 
-        background: white; border: 1px solid #EEE; border-radius: 10px; 
-        text-decoration: none; color: #1E3A5F; font-size: 13px; font-weight: 800;
+        flex: 1; text-align: center; padding: 8px 0; background: white; 
+        border: 1px solid #EEE; border-radius: 10px; text-decoration: none; 
+        color: #1E3A5F; font-size: 14px; font-weight: 800;
     }}
     
-    /* 탭 내 글자 정렬 보정: padding-bottom을 늘려 글자를 위로 올림 */
-    .tab-container {{ display: flex; width: 100%; gap: 1px; }}
+    /* 탭 디자인: 글자를 상단으로 배치하고 하단 여백 확보 */
+    .tab-container {{ display: flex; width: 100%; gap: 2px; }}
     .tab-item {{ 
         flex: 1; text-align: center; 
-        padding-top: 10px; padding-bottom: 18px; /* 아래쪽 패딩을 늘려 글자를 위로 배치 */
-        font-size: 13px; font-weight: 800; color: #333 !important; 
-        text-decoration: none; border-radius: 12px 12px 0 0; opacity: 0.4;
+        padding-top: 8px; padding-bottom: 22px; /* 글자를 위로 올림 */
+        font-size: 13px; font-weight: 800; color: white !important; 
+        text-decoration: none; border-radius: 10px 10px 0 0; opacity: 0.6;
     }}
-    .tab-item.active {{ opacity: 1; color: white !important; font-size: 14px; }}
+    .tab-item.active {{ opacity: 1; font-size: 14px; }}
     
-    /* 식단 카드 내부 배치 */
+    /* 식단 카드 디자인: 초기 이미지처럼 얇은 보라색 테두리와 상단 굵은 선 */
     .menu-card {{
-        border: 2px solid {sel_c}; border-top: none; border-radius: 0 0 20px 20px;
-        min-height: 240px; display: flex; flex-direction: column; 
-        justify-content: flex-start; align-items: center;
-        padding: 45px 25px 30px 25px; /* 상단 여백을 충분히 주어 탭과 분리 */
-        background: white; box-shadow: 0 10px 20px rgba(0,0,0,0.05); text-align: center;
-        margin-top: -5px; /* 탭과의 결합 부위 미세 조정 */
+        border: 1.5px solid #673AB7; /* 초기 이미지 스타일의 얇은 테두리 */
+        border-top: 5px solid {sel_c}; /* 선택된 탭 색상의 굵은 상단 바 */
+        border-radius: 0 0 20px 20px;
+        min-height: 250px; display: flex; flex-direction: column; 
+        justify-content: center; align-items: center;
+        padding: 40px 20px; background: white; text-align: center;
+        margin-top: -1px; /* 탭과의 경계면 밀착 */
     }}
-    .main-menu {{ font-size: 21px; font-weight: 900; color: #111; line-height: 1.5; margin-bottom: 20px; }}
-    .side-menu {{ color: #666; font-size: 15px; line-height: 1.7; }}
+    
+    .main-menu {{ font-size: 22px; font-weight: 900; color: #111; margin-bottom: 20px; }}
+    .side-menu {{ color: #777; font-size: 16px; line-height: 1.8; }}
     
     button[title="Manage app"], #MainMenu, footer, .stDeployButton {{ display: none !important; }}
 </style>
@@ -141,13 +137,13 @@ st.markdown(f"""
 <div class="status-msg">{get_realtime_status(selected)}</div>
 
 <div class="nav-row">
-    <a href="?d={(d-timedelta(1)).strftime('%Y-%m-%d')}&meal={selected}" class="nav-btn" target="_self">PREV</a>
-    <a href="?d={today_date}&meal={selected}" class="nav-btn" target="_self">TODAY</a>
-    <a href="?d={(d+timedelta(1)).strftime('%Y-%m-%d')}&meal={selected}" class="nav-btn" target="_self">NEXT</a>
+    <a href="?d={(d-timedelta(1)).strftime('%Y-%m-%d')}&meal={selected}" class="nav-btn" target="_self">◀ 이전</a>
+    <a href="?d={today_date}&meal={selected}" class="nav-btn" target="_self">오늘</a>
+    <a href="?d={(d+timedelta(1)).strftime('%Y-%m-%d')}&meal={selected}" class="nav-btn" target="_self">다음 ▶</a>
 </div>
 """, unsafe_allow_html=True)
 
-# 탭 메뉴 (글자 위치 보정 적용)
+# 탭 메뉴
 tabs_html = '<div class="tab-container">'
 for m, c in colors.items():
     active_class = "active" if m == selected else ""
@@ -165,7 +161,7 @@ else:
 st.markdown(f"""
 <div class="menu-card">
     <div class="main-menu">{main_m}</div>
-    <div style="width:40%; height:1px; background:#F0F0F0; margin:10px auto 20px auto;"></div>
+    <div style="width:50px; height:2px; background:#EEE; margin-bottom:20px;"></div>
     <div class="side-menu">{side_m}</div>
 </div>
 """, unsafe_allow_html=True)
