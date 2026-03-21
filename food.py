@@ -75,7 +75,7 @@ wd_color = "#2196F3" if wd == 5 else "#E91E63" if wd == 6 else "#1E3A5F"
 s, colors = get_shift(d), {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 sel_c = colors.get(selected, "#8BC34A")
 
-# 6. 스타일 CSS (기존 디자인 유지 및 타이틀 높이 보정)
+# 6. 스타일 CSS (날짜 박스 슬림화 및 간격 조정)
 st.markdown(f"""
 <style>
     [data-testid="stAppViewBlockContainer"] {{ 
@@ -87,13 +87,16 @@ st.markdown(f"""
 
     .main-title {{
         text-align: center; font-size: 22px; font-weight: 900; color: #1E3A5F;
-        margin-bottom: 12px; line-height: 1.4;
+        margin-bottom: 24px; /* 타이틀과 날짜 박스 사이 간격 확대 */
+        line-height: 1.2;
         display: block;
     }}
     
     .date-box {{ 
-        text-align: center; background: #F4F7FF; padding: 8px; border-radius: 15px; 
-        font-weight: 800; border: 1px solid #D6DCEC; font-size: 17px; margin-bottom: 10px;
+        text-align: center; background: #F4F7FF; 
+        padding: 4px; /* 날짜 박스 슬림화 (기존 8px -> 4px) */
+        border-radius: 15px; 
+        font-weight: 800; border: 1px solid #D6DCEC; font-size: 16px; margin-bottom: 10px;
     }}
     
     .status-msg {{ text-align: center; font-size: 14px; font-weight: 700; color: #555; margin-bottom: 15px; min-height: 20px; }}
@@ -133,7 +136,7 @@ st.markdown('<div class="main-title">🍽️ 성의교정 주간식단</div>', u
 st.markdown(f"""
 <div class="date-box">
     {d.strftime("%Y.%m.%d")} (<span style="color:{wd_color}">{weekday_names[wd]}</span>)
-    <span style="background:{s['bg']}; color:white; padding:2px 8px; border-radius:10px; font-size:12px; margin-left:5px; vertical-align:middle;">{s['n']}</span>
+    <span style="background:{s['bg']}; color:white; padding:1px 8px; border-radius:10px; font-size:11px; margin-left:5px; vertical-align:middle;">{s['n']}</span>
 </div>
 <div class="status-msg">{get_realtime_status(selected, meal_exists)}</div>
 
@@ -151,14 +154,11 @@ for m, c in colors.items():
     tabs_html += f'<a href="?d={d}&meal={m}" class="tab-item {active_class}" style="background:{c}" target="_self">{m}</a>'
 st.markdown(tabs_html + '</div>', unsafe_allow_html=True)
 
-# 8. 식단 출력 (요청 문구 반영)
+# 8. 식단 출력
 if meal_exists:
     main_m, side_m = meal_info['menu'], meal_info['side']
 else:
-    if selected == "간편식":
-        main_m = "오늘은 간편식을 제공하지 않습니다." # 이전 요청 유지
-    else:
-        main_m = "아직 식단 정보가 업데이트 되지 않았습니다" # 신규 요청 반영
+    main_m = "오늘은 간편식을 제공하지 않습니다." if selected == "간편식" else "아직 식단 정보가 업데이트 되지 않았습니다"
     side_m = ""
 
 st.markdown(f"""
