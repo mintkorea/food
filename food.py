@@ -1,49 +1,52 @@
+
 import streamlit as st
 
-# CSS 주입: 탭과 카드 사이의 여백 제거 및 스타일 정렬
 st.markdown("""
     <style>
-    /* 1. 탭 전체 컨테이너 여백 조정 */
-    div[data-testid="stTabs"] {
-        gap: 0px !important;
-    }
-
-    /* 2. 개별 탭 버튼 스타일 */
-    button[data-testid="stMarker"] {
-        border-radius: 10px 10px 0px 0px !important; /* 상단만 둥글게 */
-        margin-bottom: -1px !important; /* 카드 테두리와 겹치게 하여 경계선 제거 */
-        border-bottom: none !important;
-    }
-
-    /* 3. 탭 하단 콘텐츠(카드 부분) 박스 스타일 */
-    div[data-testid="stTabPanel"] {
-        background-color: white;
-        border: 2px solid #A3C639; /* 이미지의 연두색 계열 예시 */
-        border-radius: 0px 20px 20px 20px !important; /* 탭 연결부 제외 둥글게 */
-        padding: 40px 20px !important;
-        margin-top: 0px !important;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
+    /* 1. 기본 탭의 하단 빨간색 바와 밑줄 제거 */
+    div[data-testid="stTab"] {
+        border: none !important;
+        background-color: transparent !important;
     }
     
-    /* 4. 메뉴 텍스트 중앙 정렬 및 여백 */
-    .menu-title {
-        font-size: 24px;
-        font-weight: bold;
-        text-align: center;
-        margin-bottom: 20px;
+    div[data-testid="stTab"] p {
+        font-size: 16px;
+        font-weight: 600;
+        color: #888; /* 비활성 탭 글자색 */
     }
-    .menu-details {
+
+    /* 2. 탭 버튼을 '카드 형태'로 변형 */
+    div[data-testid="stTab"] {
+        background-color: #f0f2f6; /* 비활성 배경색 */
+        border-radius: 12px 12px 0 0 !important;
+        padding: 8px 16px !important;
+        margin-right: 4px !important;
+        min-width: 80px;
         text-align: center;
-        color: #666;
-        line-height: 1.6;
+    }
+
+    /* 3. 활성화된 탭 스타일 (이미지의 색감 반영) */
+    div[aria-selected="true"] {
+        background-color: #A3C639 !important; /* 목표 이미지의 연두색 계열 */
+        color: white !important;
+    }
+    
+    div[aria-selected="true"] p {
+        color: white !important;
+    }
+
+    /* 4. 탭 하단 콘텐츠 박스와 연결 */
+    div[data-testid="stTabPanel"] {
+        border: 2px solid #A3C639 !important;
+        border-radius: 0 15px 15px 15px !important;
+        padding: 30px !important;
+        margin-top: -1px !important; /* 탭과 박스 사이 간격 제거 */
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 탭 생성
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["조식", "간편식", "중식", "석식", "야식"])
-
-with tab3: # 중식 예시
-    st.markdown('<p class="menu-title">순살닭볶음</p>', unsafe_allow_html=True)
-    st.markdown('<hr style="border:0.5px solid #eee; width:50%; margin:auto; margin-bottom:20px;">', unsafe_allow_html=True)
-    st.markdown('<p class="menu-details">맑은뭇국, 흰쌀밥, 멕시칸마요범벅, 양념깻잎지,<br>깍두기, 원두커피</p>', unsafe_allow_html=True)
+# 탭 구현부
+tabs = st.tabs(["조식", "간편식", "중식", "석식", "야식"])
+with tabs[2]: # 중식
+    st.markdown("### 순살닭볶음")
+    st.write("맑은뭇국, 흰쌀밥, 멕시칸마요범벅...")
