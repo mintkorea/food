@@ -32,11 +32,13 @@ today_date = now_dt.date()
 d = datetime.strptime(params["d"], "%Y-%m-%d").date() if "d" in params else today_date
 selected = params.get("meal", "중식")
 
-# 4. 배식 안내 문구 로직 (개선: 식단 유무 확인)
+# 식단 데이터 존재 여부 확인
+meal_info = data.get(d.strftime("%Y-%m-%d"), {}).get(selected)
+meal_exists = meal_info and str(meal_info['menu']).strip() not in ["", "nan", "None", "식단 정보 없음"]
+
+# 4. 배식 안내 문구 로직
 def get_realtime_status(selected_meal, meal_exists):
-    # 식단 정보가 없으면 메시지 노출 안 함
     if not meal_exists: return ""
-    
     if d != today_date: return f"📅 {d.strftime('%m월 %d일')} {selected_meal} 식단입니다."
     
     now_t = get_now().time()
@@ -73,23 +75,20 @@ wd_color = "#2196F3" if wd == 5 else "#E91E63" if wd == 6 else "#1E3A5F"
 s, colors = get_shift(d), {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 sel_c = colors.get(selected, "#8BC34A")
 
-# 식단 데이터 존재 여부 미리 확인
-meal_info = data.get(d.strftime("%Y-%m-%d"), {}).get(selected)
-meal_exists = meal_info and str(meal_info['menu']).strip() not in ["", "nan", "None", "식단 정보 없음"]
-
-# 6. 스타일 커스텀 CSS (여백 및 높이 축소)
+# 6. 스타일 CSS (기존 디자인 유지 및 타이틀 높이 보정)
 st.markdown(f"""
 <style>
     [data-testid="stAppViewBlockContainer"] {{ 
         max-width: 420px !important; margin: 0 auto !important; 
-        padding-top: 1rem !important; /* 상단 여백 대폭 축소 */
+        padding-top: 1rem !important;
     }}
     header {{ visibility: hidden; }}
     div[data-testid="stVerticalBlock"] {{ gap: 0rem !important; }}
 
     .main-title {{
         text-align: center; font-size: 22px; font-weight: 900; color: #1E3A5F;
-        margin-bottom: 10px; line-height: 1; /* 타이틀 높이 축소 */
+        margin-bottom: 12px; line-height: 1.4;
+        display: block;
     }}
     
     .date-box {{ 
@@ -114,11 +113,10 @@ st.markdown(f"""
     }}
     .tab-item.active {{ opacity: 1; }}
     
-    /* 카드 디자인: 높이 15% 축소 (250px -> 210px) */
     .menu-card {{
         border: 1.5px solid #673AB7; border-top: 5px solid {sel_c}; border-radius: 0 0 20px 20px;
-        min-height: 210px; /* 높이 축소 */
-        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        min-height: 210px; display: flex; flex-direction: column; 
+        justify-content: center; align-items: center;
         padding: 20px; background: white; text-align: center; margin-top: -1px;
     }}
     
@@ -153,11 +151,14 @@ for m, c in colors.items():
     tabs_html += f'<a href="?d={d}&meal={m}" class="tab-item {active_class}" style="background:{c}" target="_self">{m}</a>'
 st.markdown(tabs_html + '</div>', unsafe_allow_html=True)
 
-# 8. 식단 출력
+# 8. 식단 출력 (요청 문구 반영)
 if meal_exists:
     main_m, side_m = meal_info['menu'], meal_info['side']
 else:
-    main_m = "식단 정보가 없습니다"
+    if selected == "간편식":
+        main_m = "오늘은 간편식을 제공하지 않습니다." # 이전 요청 유지
+    else:
+        main_m = "아직 식단 정보가 업데이트 되지 않았습니다" # 신규 요청 반영
     side_m = ""
 
 st.markdown(f"""
