@@ -7,7 +7,8 @@ from zoneinfo import ZoneInfo
 KST = ZoneInfo("Asia/Seoul")
 def get_now(): return datetime.now(KST)
 
-st.set_page_config(page_title="성의교정 식단", page_icon="🍽️", layout="centered")
+# 타이틀 변경
+st.set_page_config(page_title="성의교정 주간식단", page_icon="🍽️", layout="centered")
 
 # 2. 데이터 로드
 @st.cache_data(ttl=600)
@@ -35,7 +36,7 @@ if "d" in params:
     except: d = today_date
 else: d = today_date
 
-# 4. 식사 시간 정의 (야식 시작 시간 18:00로 수정)
+# 4. 식사 시간 정의
 is_weekend = d.weekday() >= 5
 lunch_start = time(11, 30) if is_weekend else time(11, 20)
 
@@ -44,36 +45,25 @@ meal_schedule = {
     "간편식": {"start": time(7, 0), "end": time(11, 0)}, 
     "중식": {"start": lunch_start, "end": time(14, 0)},
     "석식": {"start": time(17, 20), "end": time(19, 20)},
-    "야식": {"start": time(18, 0), "end": time(19, 20)}  # 18:00 시작으로 수정
+    "야식": {"start": time(18, 0), "end": time(19, 20)}
 }
 
 # 5. 상태 메시지 로직
 def get_realtime_status(selected_meal):
     if d != today_date:
         return f"📅 {d.strftime('%m월 %d일')} {selected_meal} 식단입니다."
-    
     now_t = get_now().time()
     sched = meal_schedule[selected_meal]
-    
-    # 배식 중일 때
     if sched["start"] <= now_t <= sched["end"]:
-        if selected_meal == "간편식":
-            return "🍱 간편식 <span style='color:#8BC34A;'>배식 중</span> (사전예약분 및 현장판매)"
-        if selected_meal == "야식":
-            return "🌙 야식 <span style='color:#8BC34A;'>배식 중</span> (18:00 ~ 19:20)"
+        if selected_meal == "간편식": return "🍱 간편식 <span style='color:#8BC34A;'>배식 중</span> (예약분 및 현장판매)"
+        if selected_meal == "야식": return "🌙 야식 <span style='color:#8BC34A;'>배식 중</span> (18:00 ~ 19:20)"
         return f"✅ 지금은 <span style='color:#8BC34A;'>{selected_meal} 배식 중</span>입니다."
-    
-    # 배식 전일 때
     if now_t < sched["start"]:
         target_dt = datetime.combine(today_date, sched["start"], tzinfo=KST)
         diff = target_dt - get_now()
         h, m = divmod(int(diff.total_seconds() // 60), 60)
         t_str = f"{h}시간 {m}분" if h > 0 else f"{m}분"
-        
-        msg = f"⏳ {selected_meal} 제공까지 {t_str} 남았습니다."
-        if selected_meal == "간편식": msg += "<br><span style='font-size:11px; color:#999;'>(조식 시간부터 수령 가능)</span>"
-        return msg
-
+        return f"⏳ {selected_meal} 제공까지 {t_str} 남았습니다."
     return f"🏁 {selected_meal} 배식이 종료되었습니다."
 
 selected = params.get("meal", "중식")
@@ -91,29 +81,42 @@ s = get_shift(d)
 colors = {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 sel_c = colors.get(selected, "#8BC34A")
 
-# 7. CSS (디자인 고정)
+# 7. CSS (상단 여백 및 카드 높이 축소)
 st.markdown(f"""
 <style>
-    [data-testid="stAppViewBlockContainer"] {{ max-width: 400px !important; margin: 0 auto !important; padding: 1rem 10px !important; }}
+    /* 상단 여백 최소화 */
+    [data-testid="stAppViewBlockContainer"] {{ 
+        max-width: 400px !important; 
+        margin: 0 auto !important; 
+        padding-top: 0.5rem !important; /* 기존 1rem에서 절반으로 축소 */
+        padding-bottom: 1rem !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }}
     header {{ visibility: hidden; }}
-    .date-box {{ text-align: center; background: #F4F7FF; padding: 15px; border-radius: 15px; font-weight: 800; border: 1px solid #D6DCEC; font-size: 18px; }}
-    .status-msg {{ text-align: center; font-size: 13px; font-weight: 700; color: #555; margin: 10px 0; min-height: 40px; line-height: 1.5; }}
-    .nav-row {{ display: flex; justify-content: space-between; margin-bottom: 10px; gap: 5px; }}
-    .nav-btn {{ flex: 1; text-align: center; padding: 10px; background: white; border: 1px solid #EEE; border-radius: 8px; text-decoration: none; color: #1E3A5F; font-size: 13px; font-weight: 700; }}
+    
+    .date-box {{ text-align: center; background: #F4F7FF; padding: 12px; border-radius: 15px; font-weight: 800; border: 1px solid #D6DCEC; font-size: 17px; }}
+    .status-msg {{ text-align: center; font-size: 13px; font-weight: 700; color: #555; margin: 8px 0; min-height: 35px; line-height: 1.4; }}
+    
+    .nav-row {{ display: flex; justify-content: space-between; margin-bottom: 8px; gap: 5px; }}
+    .nav-btn {{ flex: 1; text-align: center; padding: 8px; background: white; border: 1px solid #EEE; border-radius: 8px; text-decoration: none; color: #1E3A5F; font-size: 13px; font-weight: 700; }}
+    
     .tab-container {{ display: flex; width: 100%; margin-top: 5px; gap: 2px; }}
-    .tab-item {{ flex: 1; text-align: center; padding: 12px 0; font-size: 12px; font-weight: 800; color: #333 !important; text-decoration: none; border-radius: 10px 10px 0 0; opacity: 0.6; transition: 0.2s; }}
+    .tab-item {{ flex: 1; text-align: center; padding: 10px 0; font-size: 12px; font-weight: 800; color: #333 !important; text-decoration: none; border-radius: 10px 10px 0 0; opacity: 0.6; transition: 0.2s; }}
     .tab-item.active {{ opacity: 1; color: white !important; transform: translateY(-2px); }}
+    
+    /* 카드 높이 15% 축소 (280px -> 238px) */
     .menu-card {{
         border: 2px solid {sel_c}; border-top: 5px solid {sel_c}; border-radius: 0 0 20px 20px;
-        height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: center;
-        padding: 20px; background: white; margin-top: -1px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); text-align: center;
+        height: 238px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        padding: 15px; background: white; margin-top: -1px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); text-align: center;
     }}
-    .main-menu {{ font-size: 20px; font-weight: 900; color: #111; line-height: 1.4; margin-bottom: 15px; }}
-    .side-menu {{ color: #666; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }}
+    .main-menu {{ font-size: 19px; font-weight: 900; color: #111; line-height: 1.3; margin-bottom: 10px; }}
+    .side-menu {{ color: #666; font-size: 14px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }}
 </style>
 """, unsafe_allow_html=True)
 
-# 8. UI 구성
+# 8. UI 구성 (타이틀 텍스트 추가 가능하나 로고/깔끔함을 위해 날짜박스부터 시작)
 st.markdown(f"""
 <div class="date-box">
     {d.strftime("%Y.%m.%d")} (<span style="color:{wd_color}">{weekday_names[wd]}</span>)
@@ -144,7 +147,7 @@ else:
 st.markdown(f"""
 <div class="menu-card">
     <div class="main-menu">{main_m}</div>
-    <div style="width:30%; height:1.5px; background:#F0F0F0; margin:15px auto;"></div>
+    <div style="width:30%; height:1.5px; background:#F0F0F0; margin:10px auto;"></div>
     <div class="side-menu">{side_m}</div>
 </div>
 """, unsafe_allow_html=True)
