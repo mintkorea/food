@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 KST = ZoneInfo("Asia/Seoul")
 def get_now(): return datetime.now(KST)
 
-# 타이틀 변경
+# 브라우저 탭 타이틀 설정
 st.set_page_config(page_title="성의교정 주간식단", page_icon="🍽️", layout="centered")
 
 # 2. 데이터 로드
@@ -36,7 +36,7 @@ if "d" in params:
     except: d = today_date
 else: d = today_date
 
-# 4. 식사 시간 정의
+# 4. 식사 시간 정의 (간편식/야식 로직 포함)
 is_weekend = d.weekday() >= 5
 lunch_start = time(11, 30) if is_weekend else time(11, 20)
 
@@ -81,20 +81,29 @@ s = get_shift(d)
 colors = {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 sel_c = colors.get(selected, "#8BC34A")
 
-# 7. CSS (상단 여백 및 카드 높이 축소)
+# 7. CSS (메인 타이틀 스타일 및 여백 최적화)
 st.markdown(f"""
 <style>
-    /* 상단 여백 최소화 */
     [data-testid="stAppViewBlockContainer"] {{ 
         max-width: 400px !important; 
         margin: 0 auto !important; 
-        padding-top: 0.5rem !important; /* 기존 1rem에서 절반으로 축소 */
+        padding-top: 0.2rem !important; /* 상단 여백 추가 축소 */
         padding-bottom: 1rem !important;
         padding-left: 10px !important;
         padding-right: 10px !important;
     }}
     header {{ visibility: hidden; }}
     
+    /* 메인 타이틀 스타일 */
+    .main-title {{
+        text-align: center;
+        font-size: 22px;
+        font-weight: 900;
+        color: #1E3A5F;
+        margin-bottom: 15px;
+        letter-spacing: -0.5px;
+    }}
+
     .date-box {{ text-align: center; background: #F4F7FF; padding: 12px; border-radius: 15px; font-weight: 800; border: 1px solid #D6DCEC; font-size: 17px; }}
     .status-msg {{ text-align: center; font-size: 13px; font-weight: 700; color: #555; margin: 8px 0; min-height: 35px; line-height: 1.4; }}
     
@@ -105,7 +114,7 @@ st.markdown(f"""
     .tab-item {{ flex: 1; text-align: center; padding: 10px 0; font-size: 12px; font-weight: 800; color: #333 !important; text-decoration: none; border-radius: 10px 10px 0 0; opacity: 0.6; transition: 0.2s; }}
     .tab-item.active {{ opacity: 1; color: white !important; transform: translateY(-2px); }}
     
-    /* 카드 높이 15% 축소 (280px -> 238px) */
+    /* 카드 높이 15% 축소 */
     .menu-card {{
         border: 2px solid {sel_c}; border-top: 5px solid {sel_c}; border-radius: 0 0 20px 20px;
         height: 238px; display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -116,7 +125,9 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# 8. UI 구성 (타이틀 텍스트 추가 가능하나 로고/깔끔함을 위해 날짜박스부터 시작)
+# 8. UI 구성 (메인 타이틀 명시)
+st.markdown('<div class="main-title">🍽️ 성의교정 주간식단</div>', unsafe_allow_html=True)
+
 st.markdown(f"""
 <div class="date-box">
     {d.strftime("%Y.%m.%d")} (<span style="color:{wd_color}">{weekday_names[wd]}</span>)
@@ -147,7 +158,7 @@ else:
 st.markdown(f"""
 <div class="menu-card">
     <div class="main-menu">{main_m}</div>
-    <div style="width:30%; height:1.5px; background:#F0F0F0; margin:10px auto;"></div>
+    <div style="width:30%; height:1.5px; background:#F0F0F0; margin:15px auto;"></div>
     <div class="side-menu">{side_m}</div>
 </div>
 """, unsafe_allow_html=True)
