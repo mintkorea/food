@@ -55,19 +55,15 @@ else:
         else: selected = "석식"
     else: selected = "중식"
 
-# 5. 상태 메시지 (문구 수정 반영)
+# 5. 상태 메시지 로직
 def get_realtime_status(selected_meal, meal_exists):
     if d != today_date:
         return f"📅 {d.strftime('%m월 %d일')} {selected_meal} 식단입니다."
     
-    # 공통: 현재 선택한 식단의 스케줄
     sched = schedule[selected_meal]
-    
-    # 1. 현재 배식 중인 경우
     if sched["start"] <= now_t <= sched["end"]:
         return f"✅ 지금은 <span style='color:#8BC34A;'>{selected_meal} 배식 중</span>입니다."
     
-    # 2. 아직 배식 전인 경우
     if now_t < sched["start"]:
         diff = datetime.combine(today_date, sched["start"], tzinfo=KST) - get_now()
         total_m = int(diff.total_seconds() // 60)
@@ -75,11 +71,9 @@ def get_realtime_status(selected_meal, meal_exists):
         t_str = f"{h}시간 {m}분" if h > 0 else f"{m}분"
         return f"⏳ {selected_meal} 제공까지 {t_str} 남았습니다."
 
-    # 3. 배식이 종료된 경우 (메인 식단은 다음 식사 안내 추가)
     if selected_meal in ["간편식", "야식"]:
         return f"🏁 오늘 {selected_meal} 배식은 종료되었습니다."
     
-    # 조식, 중식, 석식 종료 시 다음 식사 찾기
     main_order = ["조식", "중식", "석식"]
     next_main = None
     for m_name in main_order:
@@ -97,50 +91,10 @@ def get_realtime_status(selected_meal, meal_exists):
     
     return "🌙 오늘 모든 배식이 종료되었습니다."
 
-# 식단 데이터 존재 여부
 meal_info = data.get(d_str, {}).get(selected)
 meal_exists = meal_info and str(meal_info['menu']).strip() not in ["", "nan", "None", "식단 정보 없음"]
 
-# 6. 스타일 CSS (여백 축소 반영)
-st.markdown(f"""
-<style>
-    [data-testid="stAppViewBlockContainer"] {{ 
-        max-width: 420px !important; margin: 0 auto !important; 
-        padding-top: 0.5rem !important; /* 상단 여백 줄임 */
-    }}
-    header {{ visibility: hidden; }}
-    
-    .main-title {{ 
-        text-align: center; font-size: 22px; font-weight: 900; color: #1E3A5F; 
-        margin-bottom: 12px; /* 제목 하단 여백 줄임 */
-    }}
-    
-    .date-box {{ 
-        text-align: center; background: #F4F7FF; padding: 4px; border-radius: 15px; 
-        font-weight: 800; border: 1px solid #D6DCEC; font-size: 16px; margin-bottom: 8px; 
-    }}
-    
-    .status-msg {{ text-align: center; font-size: 14px; font-weight: 700; color: #555; margin-bottom: 15px; }}
-    
-    /* 이하 기존 스타일 유지 */
-    .nav-row {{ display: flex; justify-content: space-between; gap: 8px; margin-bottom: 20px; }}
-    .nav-btn {{ flex: 1; text-align: center; padding: 6px 0; background: white; border: 1px solid #EEE; border-radius: 8px; text-decoration: none; color: #1E3A5F; font-size: 13px; font-weight: 800; }}
-    .tab-container {{ display: flex; width: 100%; gap: 1px; }}
-    .tab-item {{ flex: 1; text-align: center; padding: 6px 0 20px 0; font-size: 12px; font-weight: 800; color: white !important; text-decoration: none; border-radius: 10px 10px 0 0; opacity: 0.6; }}
-    .tab-item.active {{ opacity: 1; }}
-    
-    .menu-card {{ 
-        border: 1.5px solid #673AB7; border-top: 5px solid {st.get_option("theme.primaryColor") if not 'selected' in locals() else "#8BC34A"}; 
-        border-radius: 0 0 20px 20px; min-height: 210px; display: flex; flex-direction: column; 
-        justify-content: center; align-items: center; padding: 20px; background: white; text-align: center; margin-top: -1px; 
-    }}
-    .main-menu {{ font-size: 20px; font-weight: 900; color: #111; margin-bottom: 15px; line-height: 1.4; }}
-    .side-menu {{ color: #777; font-size: 15px; line-height: 1.6; }}
-    button[title="Manage app"], #MainMenu, footer, .stDeployButton {{ display: none !important; }}
-</style>
-""", unsafe_allow_html=True)
-
-# 근무조 계산
+# 6. 스타일 CSS (탭 높이 및 상단 여백 집중 수정)
 def get_shift(target_d):
     anchor = datetime(2026, 3, 13).date()
     arr = [{"n":"A조","bg":"#FF9800"}, {"n":"B조","bg":"#E91E63"}, {"n":"C조","bg":"#2196F3"}]
@@ -152,7 +106,53 @@ wd_color = "#2196F3" if wd == 5 else "#E91E63" if wd == 6 else "#1E3A5F"
 s, colors = get_shift(d), {"조식": "#E95444", "간편식": "#F1A33B", "중식": "#8BC34A", "석식": "#4A90E2", "야식": "#673AB7"}
 sel_c = colors.get(selected, "#8BC34A")
 
-# UI 출력
+st.markdown(f"""
+<style>
+    [data-testid="stAppViewBlockContainer"] {{ 
+        max-width: 420px !important; margin: 0 auto !important; 
+        padding-top: 0rem !important; /* 상단 여백 최소화 */
+    }}
+    header {{ visibility: hidden; }}
+    
+    .main-title {{ 
+        text-align: center; font-size: 22px; font-weight: 900; color: #1E3A5F; 
+        margin-top: -10px; /* 타이틀 위로 끌어올림 */
+        margin-bottom: 10px; 
+    }}
+    
+    .date-box {{ 
+        text-align: center; background: #F4F7FF; padding: 4px; border-radius: 12px; 
+        font-weight: 800; border: 1px solid #D6DCEC; font-size: 15px; margin-bottom: 6px; 
+    }}
+    
+    .status-msg {{ text-align: center; font-size: 13px; font-weight: 700; color: #555; margin-bottom: 12px; }}
+    
+    .nav-row {{ display: flex; justify-content: space-between; gap: 6px; margin-bottom: 15px; }}
+    .nav-btn {{ flex: 1; text-align: center; padding: 5px 0; background: white; border: 1px solid #EEE; border-radius: 8px; text-decoration: none; color: #1E3A5F; font-size: 12px; font-weight: 800; }}
+    
+    /* 탭 높이 축소 수정 */
+    .tab-container {{ display: flex; width: 100%; gap: 1px; }}
+    .tab-item {{ 
+        flex: 1; text-align: center; 
+        padding: 8px 0; /* 상하 패딩을 줄여 높이 축소 */
+        font-size: 12px; font-weight: 800; color: white !important; 
+        text-decoration: none; border-radius: 8px 8px 0 0; opacity: 0.5;
+    }}
+    .tab-item.active {{ opacity: 1; }}
+    
+    .menu-card {{ 
+        border: 1.5px solid #673AB7; border-top: 5px solid {sel_c}; 
+        border-radius: 0 0 15px 15px; min-height: 200px; display: flex; flex-direction: column; 
+        justify-content: center; align-items: center; padding: 15px; background: white; text-align: center; margin-top: -1px; 
+    }}
+    .main-menu {{ font-size: 19px; font-weight: 900; color: #111; margin-bottom: 12px; line-height: 1.4; }}
+    .side-menu {{ color: #666; font-size: 14px; line-height: 1.5; }}
+    
+    button[title="Manage app"], #MainMenu, footer, .stDeployButton {{ display: none !important; }}
+</style>
+""", unsafe_allow_html=True)
+
+# 8. UI 출력
 st.markdown('<div class="main-title">🍽️ 성의교정 주간식단</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
@@ -169,14 +169,12 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 탭
 tabs_html = '<div class="tab-container">'
 for m, c in colors.items():
     active_class = "active" if m == selected else ""
     tabs_html += f'<a href="?d={d_str}&meal={m}" class="tab-item {active_class}" style="background:{c}" target="_self">{m}</a>'
 st.markdown(tabs_html + '</div>', unsafe_allow_html=True)
 
-# 카드 내용 출력 로직
 if meal_exists:
     main_m, side_m = meal_info['menu'], meal_info['side']
 else:
@@ -184,9 +182,9 @@ else:
     side_m = ""
 
 st.markdown(f"""
-<div class="menu-card" style="border-top: 5px solid {sel_c};">
+<div class="menu-card">
     <div class="main-menu">{main_m}</div>
-    <div style="width:40px; height:1px; background:#EEE; margin-bottom:15px;"></div>
+    <div style="width:30px; height:1px; background:#EEE; margin-bottom:12px;"></div>
     <div class="side-menu">{side_m}</div>
 </div>
 """, unsafe_allow_html=True)
